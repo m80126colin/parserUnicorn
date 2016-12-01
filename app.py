@@ -5,14 +5,11 @@ from bottle import Bottle, route, view
 
 app = Bottle()
 
-@app.route('/hello/<name>')
-def index(name):
-	return bottle.template('<b>Hello {{name}}</b>!', name = name)
-
 @app.route('/cloud')
 @view('cloud')
 def cloud_GET():
-	return dict()
+	res = []
+	return dict(list = res)
 
 @app.route('/parser')
 @view('parser')
@@ -20,10 +17,12 @@ def parser_GET():
 	return dict()
 
 @app.route('/cloud', method = 'POST')
+@view('cloud')
 def cloud_POST():
-	data = bottle.request.json
-	res  = clouds.makeCloud(data)
-	return json.dumps(res)
+	data = bottle.request.files.get('data')
+	raw  = [ line.decode() for line in data.file.readlines() ]
+	res  = clouds.makeCloud(raw)
+	return dict(list = json.dumps(res))
 
 # parser routes
 
