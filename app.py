@@ -1,5 +1,5 @@
 import os, json, io, csv
-import bottle, flask
+import bottle
 from unicorn import *
 from bottle import Bottle, route, view
 
