@@ -15,6 +15,38 @@ var downloadListener = function (e) {
   window.open(endpoint, '_blank')
 }
 
+var makeHtml = function(res) {
+  return []
+    .concat('<table class="pure-table pure-table-bordered">')
+    .concat('<thead><tr>')
+    .concat(
+      [].concat('#')
+        .concat( Object.keys(res[0]) )
+        .concat('Link')
+        .concat('Download')
+        .map(addThTag)
+      .join('')
+    )
+    .concat('</tr></thead>')
+    .concat('<tbody>')
+    .concat(
+      res.map(function (row, i) {
+        return []
+          .concat(i)
+          .concat( Object.values(row) )
+          .concat('<a class="pure-button" target="_blank" href="https://www.facebook.com/' + row.id + '">連結</a>')
+          .concat('<button class="pure-button pure-button-primary parser-download" data-id="' + row.id + '"">下載</button>')
+          .map(addTdTag)
+        .join('')
+      })
+      .map(addTrTag)
+      .join('')
+    )
+    .concat('</tbody>')
+    .concat('</table>')
+    .join('')
+}
+
 $('#form').submit(function (e) {
   e.preventDefault()
   // retrieve form data
@@ -27,35 +59,12 @@ $('#form').submit(function (e) {
   sendJSON('/allposts', data, 'POST')
   .done(function (res) {
     console.log(res)
-    var html = []
-      .concat('<table class="pure-table pure-table-bordered">')
-      .concat('<thead><tr>')
-      .concat(
-        [].concat('#')
-          .concat( Object.keys(res[0]) )
-          .concat('Link')
-          .concat('Download')
-          .map(addThTag)
-        .join('')
-      )
-      .concat('</tr></thead>')
-      .concat('<tbody>')
-      .concat(
-        res.map(function (row, i) {
-          return []
-            .concat(i)
-            .concat( Object.values(row) )
-            .concat('<a class="pure-button" target="_blank" href="https://www.facebook.com/' + row.id + '">連結</a>')
-            .concat('<button class="pure-button pure-button-primary parser-download" data-id="' + row.id + '"">下載</button>')
-            .map(addTdTag)
-          .join('')
-        })
-        .map(addTrTag)
-        .join('')
-      )
-      .concat('</tbody>')
-      .concat('</table>')
-      .join('')
+    var html
+    if (res.length !== 0) {
+      html = makeHtml(res)
+    }
+    else html = ''
+    $('#msg').html('<p>共有 ' + res.length + ' 筆結果。</p>')
     $('#result').html(html)
     $('#result .parser-download').click(downloadListener)
   })

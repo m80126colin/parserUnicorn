@@ -2,6 +2,16 @@
 <div class="pure-g">
   <div class="pure-u-1-6"></div>
   <div class="pure-u-2-3">
+    <div class="pure-menu pure-menu-horizontal" style="height: 3rem">
+      <ul class="pure-menu-list">
+        <li class="pure-menu-item">
+          <a href="/" class="pure-menu-link">回首頁</a>
+        </li>
+        <li class="pure-menu-item">
+          <a href="/cloud" class="pure-menu-link">文字雲</a>
+        </li>
+      </ul>
+    </div>
     <form id="form" class="pure-form pure-form-aligned">
       <fieldset>
         <div class="pure-control-group">
@@ -26,6 +36,7 @@
         </div>
       </fieldset>
     </form>
+    <div id="msg"></div>
     <div id="result"></div>
   </div>
   <div class="pure-u-1-6"></div>
