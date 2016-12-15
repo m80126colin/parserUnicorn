@@ -2,7 +2,7 @@ import os, json, io, csv, hashlib
 import bottle
 from unicorn import *
 from os import path
-from bottle import Bottle, route, view
+from bottle import Bottle, route
 
 # configs
 
