@@ -4,6 +4,10 @@ from unicorn import *
 from os import path
 from bottle import Bottle, route, view
 
+# configs
+
+__api_root__ = '/api'
+
 # utils
 
 def mkpath(*paths):
@@ -14,33 +18,13 @@ def mkpath(*paths):
 			os.makedirs(dirs)
 	return dirs
 
-# app
+# api
 
-app = Bottle()
-
-# GET route
-
-@app.route('/')
-@view('index')
-def index_GET():
-	return dict()
-
-@app.route('/cloud')
-@view('cloud')
-def cloud_GET():
-	res  = []
-	link = ''
-	return dict(list = res, link = link)
-
-@app.route('/parser')
-@view('parser')
-def parser_GET():
-	return dict()
+api = Bottle()
 
 # cloud route
 
-@app.route('/cloud', method = 'POST')
-@view('cloud')
+@api.route('/cloud', method = 'POST')
 def cloud_POST():
 	data = bottle.request.files.get('data')
 	raw  = [ line.decode() for line in data.file.readlines() ]
@@ -59,14 +43,14 @@ def cloud_POST():
 		writer.writerow(row)
 	csvfile.close()
 	# return
-	link = '/wordcount/' + file
+	link = __api_root__ + '/wordcount/' + file
 	return dict(list = json.dumps(res), link = link)
 
 # parser routes
 
 parser = comments.Comments()
 
-@app.route('/allposts', method = 'POST')
+@api.route('/allposts', method = 'POST')
 def allposts_POST():
 	data = bottle.request.json
 	if 'token' in data:
@@ -75,7 +59,9 @@ def allposts_POST():
 	res = parser.getAllPosts(data)
 	return json.dumps(res)
 
-@app.route('/allcomments/<nodeId>', method = 'GET')
+# all comments file
+
+@api.route('/allcomments/<nodeId>', method = 'GET')
 def allcomments_GET(nodeId):
 	# get data
 	data = bottle.request.query
@@ -106,18 +92,29 @@ def allcomments_GET(nodeId):
 	# return downloadable file
 	return bottle.static_file(file, root = dirs, download = file)
 
-# static files
+# word count file
 
-@app.route('/public/<file:path>')
-def staticFiles(file):
-	dirs = path.join('.', 'public')
-	return bottle.static_file(file, root = dirs)
-
-@app.route('/wordcount/<file:path>')
+@api.route('/wordcount/<file:path>', method = 'GET')
 def wordCountFiles(file):
 	dirs = mkpath('.', 'tmp', 'wordcount')
 	return bottle.static_file(file, root = dirs, download = file)
 
-# run server at localhost:5566
+# app
 
+app = Bottle()
+
+@app.route('/static/<file:path>')
+def appStaticFile(file):
+	dirs = path.join('.', 'dist', 'static')
+	return bottle.static_file(file, root = dirs)
+
+@app.route('/')
+def appRoot():
+	dirs = path.join('.', 'dist')
+	file = 'index.html'
+	return bottle.static_file(file, root = dirs)
+
+app.mount(__api_root__, api)
+
+# run app server at localhost:5566
 bottle.run(app, host = 'localhost', port = 5566)
