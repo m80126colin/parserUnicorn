@@ -102,6 +102,8 @@ class Comments:
 		if len(spList) < 1:
 			__log__('[Retrieve] Invalid Url: %s' % url)
 			return None
+		if '-' in spList[0]:
+			spList[0] = spList[0].split('-')[-1]
 		res = dict(page = spList[0])
 		if len(spList) >= 2:
 			res['post'] = spList[-1]

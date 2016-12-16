@@ -8,7 +8,7 @@
       <span v-if="'after' in field" v-html="field.after"></span>
     </div>
     <div class="pure-controls">
-      <button v-on:click="getAllPosts" class="pure-button pure-button-primary">送出</button>
+      <button v-on:click.prevent="getAllPosts" class="pure-button pure-button-primary">送出</button>
     </div>
   </fieldset>
   </form>

@@ -21,7 +21,7 @@
   </div>
   <button v-on:click.prevent="visualizeData" class="pure-button pure-button-primary">GO</button>
   <div class="canvas-container">
-    <canvas id="cloud" width="800" height="600"></canvas>
+    <canvas id="cloud" width="1024" height="768"></canvas>
   </div>
 </div>
 </template>

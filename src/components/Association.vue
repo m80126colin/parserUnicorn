@@ -4,7 +4,7 @@
     <fieldset>
       <div v-for="(file, i) in files" :key="file.id" :data-tag="file.id" class="pure-control-group">
         <label :for="'file' + i">檔案 {{ i }}</label>
-        <input :id="'file' + i" class="pure-input-1" type="file" :name="'file' + i" />
+        <input :id="'file' + i" class="pure-input-1-2" type="file" :name="'file' + i" />
         <button v-on:click.prevent="delFile" :data-id="i" class="pure-button">刪除</button>
       </div>
     </fieldset>
