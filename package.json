@@ -10,6 +10,9 @@
   },
   "dependencies": {
     "jquery": "^3.1.1",
+    "lodash": "^4.17.2",
+    "moment": "^2.17.1",
+    "simple-statistics": "^2.2.0",
     "vue": "^2.1.0",
     "vue-router": "^2.1.1",
     "wordcloud": "^1.0.5"

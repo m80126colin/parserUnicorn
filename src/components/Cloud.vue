@@ -1,6 +1,6 @@
 <template>
 <div class="cloud">
-  <form id="form" v-on:submit.prevent="cloudHandler" class="pure-form pure-form-stacked" method="post" enctype="multipart/form-data">
+  <form id="form" @submit.prevent="cloudHandler" class="pure-form pure-form-stacked" method="post" enctype="multipart/form-data">
     <fieldset>
       <input class="pure-input-1" id="data" type="file" name="data" />
       <button type="submit" class="pure-button pure-button-primary">上傳</button>
@@ -9,69 +9,90 @@
   <div id="count" v-if="link">
     <a class="pure-button" target="_blank" :href="link">下載</a>
   </div>
-  <textarea id="dd" cols="30" rows="10" v-model="will"></textarea>
-  <div id="rr">
-    <table v-if="wont.length" class="pure-table pure-table-bordered">
-    <tbody>
-      <tr v-for="row in wont">
-        <td v-for="ele in row">{{ ele }}</td>
-      </tr>
-    </tbody>
-    </table>
+  <div v-if="false">
+    <textarea id="dd" cols="30" rows="10" v-model="will"></textarea>
+    <div v-if="will" id="rr">
+      <table v-if="wont.length" class="pure-table pure-table-bordered">
+      <tbody>
+        <tr v-for="row in wont">
+          <td v-for="ele in row">{{ ele }}</td>
+        </tr>
+      </tbody>
+      </table>
+    </div>
+    <button @click.prevent="visualizeData" class="pure-button pure-button-primary">GO</button>
   </div>
-  <button v-on:click.prevent="visualizeData" class="pure-button pure-button-primary">GO</button>
   <div class="canvas-container">
-    <canvas id="cloud" width="1024" height="768"></canvas>
+    <canvas id="cloud" :width="width" :height="height"></canvas>
   </div>
 </div>
 </template>
 
 <script>
+import _ from 'lodash'
 import $ from 'jquery'
+import stat from 'simple-statistics'
 import WordCloud from 'WordCloud'
 
-const drawCanvas = list => {
-  list.sort((left, right) => - (left[1] - right[1]))
-  
-  let sublist = list.filter((it, i) => i < 5000)
-
-  const sum = (a, b) => a + b
-  const dif = b => { return a => a - b }
-  const sqr = a => a * a
-
-  let dat = sublist.map(item => parseInt(item[1]))
-  let avg = dat.reduce(sum) / dat.length
-  let sig = Math.sqrt(dat.map(dif(avg)).map(sqr).reduce(sum)) / dat.length
-
-  console.log(dat, avg, sig)
-
-  const standard = x => (sig === 0) ? 0 : (x - avg) / sig
-
-  let factor = $('#cloud').width() / 1024
-
-  WordCloud(document.getElementById('cloud'), {
-    list: sublist,
-    // color:      'random-dark',
-    // fontWeight: 'normal',
-    fontFamily: 'Times, serif',
-    rotateRatio: 0.5,
-    gridSize: Math.round(16 * factor),
-    weightFactor: size => factor * (standard(size) + 28)
-  })
-}
+window.stat = stat
 
 export default {
   data() {
     return {
+      width: 1000,
       link: '',
-      will: ''
+      will: '',
+      cloudData: []
     }
   },
   name: 'cloud',
   computed: {
+    height() {
+      return Math.floor(this.width * 0.75)
+    },
     wont() {
-      return this.will.trim().split('\n')
+      return (this.will || '').trim().split('\n')
              .map(str => str.trim().split(/\s+/))
+    }
+  },
+  watch: {
+    cloudData(newData) {
+      if (!Array.isArray(newData) || newData.length === 0)
+        return
+
+      const app   = this
+      const LIMIT = 10000
+
+      const list = _
+        .chain(newData)
+        .map(item => {
+          if (typeof item[1] !== 'number')
+            item[1] = 0
+          return item
+        })
+        .sort((a, b) => b[1] - a[1])
+        .take(LIMIT)
+        .value()
+
+
+      const data   = _.map(list, item => item[1])
+      const mean   = stat.mean(data)
+      const stdDev = stat.standardDeviation(data)
+
+      const factor = $('#cloud').width() / app.width
+      const zScore = x => stat.zScore(x, mean, stdDev) || 0
+
+      const range = zScore(stat.max(data))
+
+      WordCloud(document.getElementById('cloud'), {
+        list: list,
+        // color:      'random-dark',
+        // fontWeight: 'normal',
+        fontFamily: 'Times, serif, 標楷體',
+        rotateRatio: 0.5,
+        gridSize: Math.round(6 * factor),
+        weightFactor: size => 12 * factor * (7 * zScore(size) / range + 0.75)
+      })
     }
   },
   methods: {
@@ -87,13 +108,14 @@ export default {
         contentType: false
       })
       .done(data => {
-        app.link = data.link
-        let list = JSON.parse(data.list)
-        drawCanvas(list)
+        const res = JSON.parse(data.list)
+        app.link      = data.link
+        app.cloudData = res
       })
     },
     visualizeData(e) {
-      drawCanvas(this.wont)
+      let app = this
+      app.cloudData = _.map(app.wont, item => [item[0], parseInt(item[1]) || 0])
     }
   }
 }
