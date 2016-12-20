@@ -86,7 +86,7 @@ def writeWordCountCsv(data):
 
 # word count by data
 def wordCountData(data):
-	raw = [ line.decode() for line in data.file.readlines() ]
+	raw = [ line.decode().strip() for line in data.file.readlines() ]
 	# word count
 	res  = clouds.wordCount(raw)
 	return res

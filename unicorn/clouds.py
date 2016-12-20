@@ -1,6 +1,11 @@
 import jieba, os
 
 path  = os.path.dirname(os.path.realpath(__file__))
+
+
+jieba.set_dictionary( os.path.join(path, 'dict.txt.big') )
+jieba.load_userdict( os.path.join(path, 'mydict.txt') )
+
 file  = os.path.join(path, 'stopwords.txt')
 
 sw    = [ line.rstrip() for line in open(file, 'r', encoding = 'utf-8') ]
