@@ -39,7 +39,7 @@ def sumFieldIf(tbl, f1, f2):
 	return sum([ min([row.get(f1), row.get(f2)]) for row in tbl if row.get(f2) > 0 ])
 
 def apriori(dataset):
-	selects = [ sorted(x, key = lambda it : -it[1])[0:1000] for x in dataset ]
+	selects = [ sorted(x, key = lambda it : -it[1])[0:50] for x in dataset ]
 
 	word_list = list()
 	for x in selects:
@@ -123,6 +123,13 @@ def writeCsvDict(res):
 	csvfile.close()
 	# return filename
 	return file
+
+# def wordCountData2(data):
+	# raw = [ line.decode().strip() for line in data.file.readlines() ]
+	# r = csv.reader([data.file.read().decode()])
+	# res = [ x for x in r if x != [] ]
+	# print(res)
+	# return res
 
 @api.route('/associ', method = 'POST')
 def associ_POST():
