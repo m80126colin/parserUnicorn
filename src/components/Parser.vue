@@ -19,7 +19,11 @@
   <thead>
     <tr>
       <th>#</th>
-      <th v-for="key in Object.keys(result[0])">{{ key }}</th>
+      <th>id</th>
+      <th>create time</th>
+      <th>like count</th>
+      <th>comment count</th>
+      <th>share count</th>
       <th>Link</th>
       <th>Download</th>
     </tr>
@@ -27,7 +31,11 @@
   <tbody>
     <tr v-for="(row, i) in result" :key="i">
       <td>{{ i }}</td>
-      <td v-for="item in Object.values(row)">{{ item }}</td>
+      <td>{{ row.id }}</td>
+      <td>{{ getTime(row.created_time) }}</td>
+      <td>{{ row.likes.summary.total_count }}</td>
+      <td>{{ row.comments.summary.total_count }}</td>
+      <td>{{ row.shares.count }}</td>
       <td><a class="pure-button" target="_blank" :href="'https://www.facebook.com/' + row.id">連結</a></td>
       <td><button class="pure-button pure-button-primary parser-download" :data-id="row.id" v-on:click="downloadListener">下載</button></td>
     </tr>
@@ -38,6 +46,7 @@
 
 <script>
 import $ from 'jquery'
+import moment from 'moment'
 
 const fields = [
   { id: 'token', type: 'text', name: 'Token', after: '<a target="_blank" href="https://developers.facebook.com/tools/explorer/">到此領取</a>' },
@@ -56,6 +65,9 @@ export default {
   },
   name: 'parser',
   methods: {
+    getTime(str) {
+      return moment(str).format('YYYY/MM/DD HH:mm:ss ZZ')
+    },
     getAllPosts(e) {
       let app = this
       // retrieve form data

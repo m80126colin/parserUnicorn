@@ -37,4 +37,4 @@ def wordCount(strList, maxFont = 48, minFont = 10):
 		fontSize = countDict[tok]
 		res.append([tok, fontSize])
 
-	return res
+	return sorted(res, key = lambda x : -x[1])

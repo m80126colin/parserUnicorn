@@ -123,7 +123,7 @@ class Comments:
 		res = [ x
 			for ls in
 				self.__pagingByNext__('%s/posts' % pageId,
-					fields = 'created_time,id',
+					fields = 'id,created_time,comments.limit(0).summary(1),likes.limit(0).summary(1),shares',
 					since  = data.get('since'),
 					until  = data.get('until'),
 					limit  = 100)
