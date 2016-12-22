@@ -29,6 +29,21 @@ def make_dict(lst, wc):
 
 	return res
 
+def ano_make_dict(lst, tbl):
+	res = []
+	tmp = dict()
+	for idx in range(len(lst)):
+		tmp[idx] = lst[idx]
+	res.append(tmp)
+
+	for x in tbl:
+		tmp = dict()
+		for idx in range(len(lst)):
+			tmp[idx] = x.get(lst[idx])
+		res.append(tmp)
+
+	return res
+
 def countField(tbl, f):
 	return sum([ 1 if row.get(f) > 0 else 0 for row in tbl ])
 
@@ -51,6 +66,8 @@ def apriori(dataset):
 
 	table = [ make_dict(word_list, x) for x in dataset ]
 
+	another_table = ano_make_dict(word_list, table)
+
 	gen = [ dict(
 		itema     = wa,
 		itemb     = wb,
@@ -60,7 +77,7 @@ def apriori(dataset):
 
 	res = sorted(gen, key = lambda x : - (x.get('support') + x.get('confident')) )
 
-	return dict(table = table, result = res)
+	return dict(table = another_table, result = res)
 
 # api
 
@@ -139,7 +156,9 @@ def associ_POST():
 	res = apriori(dataset)
 	# make csv
 	file  = writeCsvDict(res.get('table'))
-	file2 = writeCsvDict(res.get('result'))
+	file2 = writeCsvDict([ x
+		for x in res.get('result')
+		if x.get('support') >= 0.5 and x.get('confident') >= 0.5 ])
 	# return
 	link  = __api_root__ + '/apriori/' + file
 	link2 = __api_root__ + '/apriori/' + file2
