@@ -71,8 +71,8 @@ def apriori(dataset):
 	gen = [ dict(
 		itema     = wa,
 		itemb     = wb,
-		support   = countField(table, wa) / len(table),
-		confident = sumFieldIf(table, wa, wb) / sumField(table, wa)
+		support   = round(countField(table, wa) / len(table), 2),
+		confident = round(sumFieldIf(table, wa, wb) / sumField(table, wa), 2)
 		) for (wa, wb) in itertools.combinations(word_list, 2) if sumField(table, wa) > 0 ]
 
 	res = sorted(gen, key = lambda x : - (x.get('support') + x.get('confident')) )
