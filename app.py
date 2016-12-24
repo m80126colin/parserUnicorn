@@ -1,145 +1,54 @@
-import os, json, io, csv, hashlib
-import bottle
-from unicorn import *
-from os import path
+import bottle, json, csv
 from bottle import Bottle, route
-import itertools
+from os import path
+import unicorn as uni
 
-# configs
+######################################################################
+#
+#  configs
+#
+######################################################################
 
-__api_root__ = '/api'
+# server hostname and port
+_host = 'localhost'
+_port = 5566
 
-# utils
+# root url of api server
+_api_root  = '/api'
 
-def mkpath(*paths):
-	dirs = ''
-	for p in paths:
-		dirs = path.join(dirs, p)
-		if not path.exists(dirs):
-			os.makedirs(dirs)
-	return dirs
+# folder for wordcount and association rule
+_wc_folder = 'wordcount'
+_as_folder = 'apriori'
 
-def make_dict(lst, wc):
-	res = dict()
-	for w in lst:
-		res[w] = 0
+_wc_paths  = ['.', 'tmp', _wc_folder]
+_as_paths  = ['.', 'tmp', _as_folder]
 
-	for it in wc:
-		res[ it[0] ] = it[1]
+# initialization
 
-	return res
+## directory for wordcount and association rule
+_wc_dirs   = uni.utiltools.mkpath(*_wc_paths)
+_as_dirs   = uni.utiltools.mkpath(*_as_paths)
 
-def ano_make_dict(lst, tbl):
-	res = []
-	tmp = dict()
-	for idx in range(len(lst)):
-		tmp[idx] = lst[idx]
-	res.append(tmp)
+## parser
+parser = uni.comments.Comments()
 
-	for x in tbl:
-		tmp = dict()
-		for idx in range(len(lst)):
-			tmp[idx] = x.get(lst[idx])
-		res.append(tmp)
-
-	return res
-
-def countField(tbl, f):
-	return sum([ 1 if row.get(f) > 0 else 0 for row in tbl ])
-
-def sumField(tbl, f):
-	return sum([ row.get(f) for row in tbl ])
-
-def sumFieldIf(tbl, f1, f2):
-	return sum([ min([row.get(f1), row.get(f2)]) for row in tbl if row.get(f2) > 0 ])
-
-def apriori(dataset):
-	selects = [ sorted(x, key = lambda it : -it[1])[0:50] for x in dataset ]
-
-	word_list = list()
-	for x in selects:
-		word_list = list(set(word_list) | set([ y[0] for y in x ]))
-
-	def_dict = dict()
-	for word in word_list:
-		def_dict[word] = 0
-
-	table = [ make_dict(word_list, x) for x in dataset ]
-
-	another_table = ano_make_dict(word_list, table)
-
-	gen = [ dict(
-		itema     = wa,
-		itemb     = wb,
-		support   = round(countField(table, wa) / len(table), 2),
-		confident = round(sumFieldIf(table, wa, wb) / sumField(table, wa), 2)
-		) for (wa, wb) in itertools.combinations(word_list, 2) if sumField(table, wa) > 0 ]
-
-	res = sorted(gen, key = lambda x : - (x.get('support') + x.get('confident')) )
-
-	return dict(table = another_table, result = res)
-
-# api
+######################################################################
+#
+#  api
+#
+######################################################################
 
 api = Bottle()
 
-# write a csv file with md5 filename
-
-def writeWordCountCsv(data):
-	# md5
-	m = hashlib.md5()
-	m.update( repr(data).encode() )
-	# make csv
-	dirs = mkpath('.', 'tmp', 'wordcount')
-	file = '%s.csv' % m.hexdigest()
-	# write csv
-	csvfile = open(path.join(dirs, file), 'w', encoding = 'utf-8')
-	writer  = csv.writer(csvfile)
-	for row in data:
-		writer.writerow(row)
-	csvfile.close()
-	# return filename
-	return file
+def apiPath(*p):
+	return '%s/%s' % ( _api_root, '/'.join(p) )
 
 # word count by data
 def wordCountData(data):
 	raw = [ line.decode().strip() for line in data.file.readlines() ]
 	# word count
-	res  = clouds.wordCount(raw)
+	res  = uni.analysis.wordCount(raw)
 	return res
-
-# cloud route
-
-@api.route('/cloud', method = 'POST')
-def cloud_POST():
-	data = bottle.request.files.get('data')
-	res  = wordCountData(data)
-	# write into csv
-	file = writeWordCountCsv(res)
-	# return
-	link = __api_root__ + '/wordcount/' + file
-	return dict(list = json.dumps(res), link = link)
-
-
-def writeCsvDict(res):
-	# md5
-	m = hashlib.md5()
-	m.update( repr(res).encode() )
-	# make csv
-	dirs = mkpath('.', 'tmp', 'apriori')
-	file = '%s.csv' % m.hexdigest()
-	# write csv
-	csvfile = open(path.join(dirs, file), 'w', encoding = 'utf-8')
-	# write data into csv
-	data = res
-	if len(data) > 0:
-		writer = csv.DictWriter( csvfile, sorted(data[0].keys()) )
-		writer.writeheader()
-		for row in data:
-			writer.writerow(row)
-	csvfile.close()
-	# return filename
-	return file
 
 # def wordCountData2(data):
 	# raw = [ line.decode().strip() for line in data.file.readlines() ]
@@ -148,25 +57,42 @@ def writeCsvDict(res):
 	# print(res)
 	# return res
 
+# cloud route
+
+@api.route('/cloud', method = 'POST')
+def cloud_POST():
+	data   = bottle.request.files.get('data')
+	res    = wordCountData(data)
+	# write into csv
+	file   = uni.utiltools.writeCsv(res, _wc_paths)
+	# return
+	return dict(
+		list = json.dumps(res),
+		link = apiPath(_wc_folder, file)
+	)
+
+
 @api.route('/associ', method = 'POST')
 def associ_POST():
-	files = bottle.request.files
+	files   = bottle.request.files
 	dataset = [ wordCountData(files.get(file)) for file in files ]
 	# apriori
-	res = apriori(dataset)
+	res     = uni.analysis.apriori(dataset)
 	# make csv
-	file  = writeCsvDict(res.get('table'))
-	file2 = writeCsvDict([ x
+	file    = uni.utiltools.writeCsvDict(res.get('table'), _as_paths)
+	file2   = uni.utiltools.writeCsvDict([ x
 		for x in res.get('result')
-		if x.get('support') >= 0.5 and x.get('confident') >= 0.5 ])
+		if x.get('support') >= 0.5 and x.get('confident') >= 0.5 ]
+		, _as_paths)
 	# return
-	link  = __api_root__ + '/apriori/' + file
-	link2 = __api_root__ + '/apriori/' + file2
-	return dict(list = json.dumps(res.get('result')[0:500]), link = link, link2 = link2)
+	return dict(
+		list  = json.dumps(res.get('result')[0:500]),
+		link  = apiPath(_as_folder, file),
+		link2 = apiPath(_as_folder, file2)
+	)
 
 # parser routes
 
-parser = comments.Comments()
 
 @api.route('/allposts', method = 'POST')
 def allposts_POST():
@@ -193,7 +119,7 @@ def allcomments_GET(nodeId):
 	res  = parser.getAllComments(nodeId)
 
 	# make path and filename of csv
-	dirs = mkpath('.', 'tmp', 'comment')
+	dirs = uni.utiltools.mkpath('.', 'tmp', 'comment')
 	file = '%s.csv' % nodeId
 	print('Filename:', file)
 
@@ -212,32 +138,37 @@ def allcomments_GET(nodeId):
 
 # word count file
 
-@api.route('/wordcount/<file:path>', method = 'GET')
-def wordCountFiles(file):
-	dirs = mkpath('.', 'tmp', 'wordcount')
-	return bottle.static_file(file, root = dirs, download = file)
+@api.route('/%s/<file:path>' % _wc_folder, method = 'GET')
+def wordcountFiles(file):
+	return bottle.static_file(file, root = _wc_dirs, download = file)
 
-@api.route('/apriori/<file:path>', method = 'GET')
+@api.route('/%s/<file:path>' % _as_folder, method = 'GET')
 def aprioriFiles(file):
-	dirs = mkpath('.', 'tmp', 'apriori')
-	return bottle.static_file(file, root = dirs, download = file)
+	return bottle.static_file(file, root = _as_dirs, download = file)
 
-# app
+######################################################################
+#
+#  app
+#
+######################################################################
 
 app = Bottle()
 
-@app.route('/static/<file:path>')
-def appStaticFile(file):
-	dirs = path.join('.', 'dist', 'static')
-	return bottle.static_file(file, root = dirs)
-
+# index html
 @app.route('/')
 def appRoot():
 	dirs = path.join('.', 'dist')
 	file = 'index.html'
 	return bottle.static_file(file, root = dirs)
 
-app.mount(__api_root__, api)
+# 
+@app.route('/static/<file:path>')
+def appStaticFile(file):
+	dirs = path.join('.', 'dist', 'static')
+	return bottle.static_file(file, root = dirs)
+
+# mount api server at _api_root
+app.mount(_api_root, api)
 
 # run app server at localhost:5566
-bottle.run(app, host = 'localhost', port = 5566)
+bottle.run(app, host = _host, port = _port)

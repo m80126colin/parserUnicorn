@@ -1,6 +1,4 @@
-import sys
-import requests
-import json
+import sys, requests, json
 from urllib import parse
 
 def __log__(message, mode = 'debug'):
