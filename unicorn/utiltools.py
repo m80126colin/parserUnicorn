@@ -22,9 +22,12 @@ def _csvFilename(paths, data):
 
 # write a csv file with md5 filename
 
-def _writeCsvInterface(data, paths = ['.'], dictOpt = False):
+def _writeCsvInterface(data, paths = ['.'], filename = None, dictOpt = False):
 	dirs = _mkpath(*paths)
-	file = _csvFilename(paths, data)
+	if filename is None:
+		file = _csvFilename(paths, data)
+	else:
+		file = filename
 	# write csv
 	csvfile = open(path.join(dirs, file), 'w', encoding = 'utf-8')
 	# write data into csv

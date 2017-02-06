@@ -19,15 +19,18 @@ _api_root  = '/api'
 # folder for wordcount and association rule
 _wc_folder = 'wordcount'
 _as_folder = 'apriori'
+_cm_folder = 'comment'
 
 _wc_paths  = ['.', 'tmp', _wc_folder]
 _as_paths  = ['.', 'tmp', _as_folder]
+_cm_paths  = ['.', 'tmp', _cm_folder]
 
 # initialization
 
 ## directory for wordcount and association rule
 _wc_dirs   = uni.utiltools.mkpath(*_wc_paths)
 _as_dirs   = uni.utiltools.mkpath(*_as_paths)
+_cm_dirs   = uni.utiltools.mkpath(*_cm_paths)
 
 ## parser
 parser = uni.comments.Comments()
@@ -40,6 +43,7 @@ parser = uni.comments.Comments()
 
 api = Bottle()
 
+# apiPath
 def apiPath(*p):
 	return '%s/%s' % ( _api_root, '/'.join(p) )
 
@@ -47,15 +51,7 @@ def apiPath(*p):
 def wordCountData(data):
 	raw = [ line.decode().strip() for line in data.file.readlines() ]
 	# word count
-	res  = uni.analysis.wordCount(raw)
-	return res
-
-# def wordCountData2(data):
-	# raw = [ line.decode().strip() for line in data.file.readlines() ]
-	# r = csv.reader([data.file.read().decode()])
-	# res = [ x for x in r if x != [] ]
-	# print(res)
-	# return res
+	return uni.analysis.wordCount(raw)
 
 # cloud route
 
@@ -110,31 +106,15 @@ def allcomments_GET(nodeId):
 	# get data
 	data = bottle.request.query
 	print(data)
-
 	# retrieve token
 	if 'token' in data:
 		parser.setToken(data.get('token'))
-
 	# get comments
 	res  = parser.getAllComments(nodeId)
-
 	# make path and filename of csv
-	dirs = uni.utiltools.mkpath('.', 'tmp', 'comment')
-	file = '%s.csv' % nodeId
-	print('Filename:', file)
-
-	csvfile = open(path.join(dirs, file), 'w', encoding = 'utf-8')
-	# write data into csv
-	data = res.get('data')
-	if len(data) > 0:
-		writer = csv.DictWriter( csvfile, sorted(data[0].keys()) )
-		writer.writeheader()
-		for row in data:
-			writer.writerow(row)
-	csvfile.close()
-
+	file = writeCsvDict(res.get('data'), filename = '%s.csv' % nodeId)
 	# return downloadable file
-	return bottle.static_file(file, root = dirs, download = file)
+	return bottle.static_file(file, root = _cm_dirs, download = file)
 
 # word count file
 
