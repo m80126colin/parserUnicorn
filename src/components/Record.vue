@@ -6,8 +6,7 @@
   <tbody>
     <tr v-for="r in records[page]">
       <td>{{ r.id }}</td>
-      <td>{{ r.url }}</td>
-      <td v-for="s in r.submits">{{ s.state }}</td>
+      <td v-for="s in r.submits">{{ s }}</td>
     </tr>
   </tbody>
   <tfoot>

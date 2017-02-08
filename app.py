@@ -178,29 +178,46 @@ def allposts_POST():
 	res = parser.getAllPosts(data)
 	return json.dumps(res)
 
+# write csv
+def myWriteCsv(filename, data):
+	csvfile = open(filename, 'w', encoding = 'utf-8')
+	writer  = csv.writer(csvfile)
+	for row in data:
+		writer.writerow(row)
+	csvfile.close()
+
+# post route
+
+@api.route('/post/id', method = 'POST')
+def posts_id_POST():
+	data = bottle.request.json
+	# check token
+	if 'token' in data:
+		parser.setToken(data.get('token'))
+	# get posts id
+	postid = parser.getPostFullId(data.get('url'))
+	# return
+	return json.dumps(dict(postid = postid))
+
 # like route
 
-@api.route('/likes', method = 'POST')
+@api.route('/post/likes', method = 'POST')
 def likes_POST():
 	data = bottle.request.json
 	# check token
 	if 'token' in data:
 		parser.setToken(data.get('token'))
-	# get url & likes
-	nodeid = parser.getPostFullId(data.get('url'))
+	# get likes
+	nodeid = data.get('postid')
 	res    = parser.getNodeLikes(nodeid)
 	# 
 	dirs   = mkpath('.', 'downloads', 'likes')
-	file   = '%f_%s.csv' % (time.time(), res.get('nodeid'))
+	file   = '%s_likes.csv' % nodeid
 	# write csv
-	csvfile = open(path.join(dirs, file), 'w', encoding = 'utf-8')
-	writer  = csv.writer(csvfile)
-	for row in res.get('likes'):
-		writer.writerow(row)
-	csvfile.close()
+	myWriteCsv(path.join(dirs, file), res.get('likes'))
+	# return
 	return json.dumps(dict(
 		link  = file,
-		id    = res.get('nodeid'),
 		count = len(res.get('likes'))
 	))
 
@@ -253,16 +270,18 @@ def aprioriFiles(file):
 
 app = Bottle()
 
-@app.route('/static/<file:path>')
-def appStaticFile(file):
-	dirs = path.join('.', 'dist', 'static')
-	return bottle.static_file(file, root = dirs)
-
 @app.route('/')
-def appRoot():
+def app_index():
 	dirs = path.join('.', 'dist')
 	file = 'index.html'
 	return bottle.static_file(file, root = dirs)
+
+@app.route('/static/<file:path>')
+def app_static_file(file):
+	dirs = path.join('.', 'dist', 'static')
+	return bottle.static_file(file, root = dirs)
+
+# setup api
 
 app.mount(__api_root__, api)
 

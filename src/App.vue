@@ -14,6 +14,7 @@
 </template>
 
 <script>
+import _      from 'lodash'
 import Navbar from './components/Navbar'
 
 require('semantic-ui-css/semantic.css')
@@ -21,6 +22,18 @@ require('semantic-ui-css/semantic.js')
 
 let counter = {
   record: 0
+}
+
+window._ = _
+
+const postJson = (url, data) => {
+  return $.ajax({
+    type:        'POST',
+    url:         url,
+    data:        JSON.stringify(data),
+    contentType: 'application/json',
+    dataType:    'json'
+  })
 }
 
 export default {
@@ -40,17 +53,45 @@ export default {
   },
   methods: {
     addRecord(url) {
-      let app = this
+      const app = this
+      const api = [
+        '/api/post/id',
+        '/api/post/likes',
+        '/api/post/likes',
+        '/api/post/likes'
+      ]
+      // make record
       let req = {
         id:  counter.record ++,
-        url: url,
         submits: [
-          { state: 0, result: {} },
+          { state: 0, result: {} }, // /post/id    request
+          { state: 0, result: {} }, // /post/likes request
           { state: 0, result: {} },
           { state: 0, result: {} }
         ]
       }
       app.records.data = _.concat(req, app.records.data)
+      // send requests
+      const configs = _.zip(api, req.submits)
+      const first   = _.head(configs)
+      postJson(first[0], {
+        token: app.store.token,
+        url:   url
+      })
+      .done(res => {
+        _.assign(first[1], { state: 1, result: res })
+        _(configs)
+        .tail()
+        .forEach(cfg => {
+          postJson(cfg[0], {
+            token:  app.store.token,
+            postid: res.postid
+          })
+          .done(data => {
+            _.assign(cfg[1], { state: 1, result: data })
+          })
+        })
+      })
     },
     setRecordPageSize(num) {
       this.records.size = num
