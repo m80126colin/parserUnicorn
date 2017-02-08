@@ -157,6 +157,23 @@ class Comments:
 		__log__(comments)
 		return dict(id = nodeId, data = comments)
 
+	def getPostFullId(self, url):
+		# retrieve url
+		name, postid = self.__retrieveUrl__(url)
+		__log__('[Like] Retrieve Url, Name: %s, Post ID: %s' % (name, postid), 'log')
+		# get page ID
+		pageid = self.getPageIdByName(name)
+		__log__('[Like] Page ID: %s' % pageid, 'log')
+		# return full ID
+		return '%s_%s' % (pageid, postid)
+
+	def getNodeLikes(self, nodeid):
+		node  = '%s/likes' % nodeid
+		xs    = [ x.get('id')
+			for ls in self.__pagingByAfter__(node)
+			for x in ls ]
+		return dict(id = nodeid, likes = xs)
+
 	def getAll(self, url):
 		# retrieve url
 		name, postId = self.__retrieveUrl__(url)

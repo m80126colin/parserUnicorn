@@ -1,12 +1,8 @@
 <template>
-<nav id="navbar" class="pure-menu pure-menu-horizontal">
-<ul class="pure-menu-list">
-  <li v-for="route in routes" class="pure-menu-item">
-    <router-link :to="route.path" class="pure-menu-link">
-    {{ route.name }}
-    </router-link>
-  </li>
-</ul>
+<nav id="navbar" class="ui menu">
+  <router-link v-for="route in routes" :to="route.path" class="item">
+  {{ route.name }}
+  </router-link>
 </nav>
 </template>
 
@@ -14,7 +10,7 @@
 const routes = require('../routes')
 
 export default {
-  name: 'navbar',
+  name: 'menu',
   data() {
     return {
       routes: routes
@@ -25,6 +21,6 @@ export default {
 
 <style>
 #navbar {
-  height: 3rem;
+  margin-bottom: 3rem;
 }
 </style>

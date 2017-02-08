@@ -1,5 +1,5 @@
 <template>
-<div class="cloud">
+<div id="cloud" class="cloud">
   <form id="form" @submit.prevent="cloudHandler" class="pure-form pure-form-stacked" method="post" enctype="multipart/form-data">
     <fieldset>
       <input class="pure-input-1" id="data" type="file" name="data" />
@@ -37,6 +37,7 @@ import WordCloud from 'WordCloud'
 window.stat = stat
 
 export default {
+  name: 'cloud',
   data() {
     return {
       width: 1000,
@@ -45,7 +46,6 @@ export default {
       cloudData: []
     }
   },
-  name: 'cloud',
   computed: {
     height() {
       return Math.floor(this.width * 0.75)

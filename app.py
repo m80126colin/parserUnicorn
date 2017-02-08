@@ -4,6 +4,7 @@ from unicorn import *
 from os import path
 from bottle import Bottle, route
 import itertools
+import time
 
 # configs
 
@@ -176,6 +177,32 @@ def allposts_POST():
 
 	res = parser.getAllPosts(data)
 	return json.dumps(res)
+
+# like route
+
+@api.route('/likes', method = 'POST')
+def likes_POST():
+	data = bottle.request.json
+	# check token
+	if 'token' in data:
+		parser.setToken(data.get('token'))
+	# get url & likes
+	nodeid = parser.getPostFullId(data.get('url'))
+	res    = parser.getNodeLikes(nodeid)
+	# 
+	dirs   = mkpath('.', 'downloads', 'likes')
+	file   = '%f_%s.csv' % (time.time(), res.get('nodeid'))
+	# write csv
+	csvfile = open(path.join(dirs, file), 'w', encoding = 'utf-8')
+	writer  = csv.writer(csvfile)
+	for row in res.get('likes'):
+		writer.writerow(row)
+	csvfile.close()
+	return json.dumps(dict(
+		link  = file,
+		id    = res.get('nodeid'),
+		count = len(res.get('likes'))
+	))
 
 # all comments file
 
