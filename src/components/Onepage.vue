@@ -20,7 +20,7 @@
       </div>
       <div class="field">
         <label for="url">文章連結</label>
-        <input type="text" name="url"   v-model="url" />
+        <input type="text" name="url" v-model="url" />
       </div>
     </div>
     <div class="field">
@@ -35,65 +35,32 @@
     <header class="ui dividing header">
       <h2>擷取紀錄</h2>
     </header>
-    <table class="ui celled table">
-      <thead>
-      <tr>
-        <th v-for="h in header">{{ h }}</th>
-      </tr>
-      </thead>
-      <tbody>
-        <tr v-for="r in records[page]">
-          <td>{{ r.id }}</td>
-          <td>{{ r.url }}</td>
-          <td v-for="s in r.submits">{{ s.state }}</td>
-        </tr>
-      </tbody>
-      <tfoot>
-      <tr>
-        <th :colspan="header.length">
-          <div class="ui right floated pagination menu">
-            <a class="item"
-              v-for="(p, idx) in records" :data-id="idx"
-              @click="toPage">{{ idx + 1 }}</a>
-          </div>
-        </th>
-      </tr>
-      </tfoot>
-    </table>
+    <record :appdata="appdata"></record>
   </article>
 </section>
 </template>
 
 <script>
-import _ from 'lodash'
-import $ from 'jquery'
+import Record from './Record'
 
 export default {
   name: 'onepage',
   props: [ 'appdata' ],
+  components: { Record },
   data() {
     return {
-      url: '',
-      page: 0
+      url: ''
     }
   },
   computed: {
-    token()   { return this.appdata.store.token    },
-    records() {
-      const rec = this.appdata.records
-      return _.chunk(rec.data, rec.size)
-    },
-    header()  { return this.appdata.records.header }
+    token()   { return this.appdata.store.token  },
+    records() { return this.appdata.records.data }
   },
   methods: {
     recordSubmit(e) {
       const app = this
       app.$emit('addRecord', app.url)
       app.url = ''
-    },
-    toPage(e) {
-      const app = this
-      app.page  = $(e.target).data('id')
     }
   }
 }
