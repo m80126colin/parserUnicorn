@@ -45,7 +45,7 @@ export default {
         token: ''
       },
       records: {
-        header: ['編號', '文章連結', '按讚數', '分享數', '留言數'],
+        header: ['', '文章連結', '分享數', '按讚數', '留言數'],
         size:   10,
         data:   []
       }
@@ -54,42 +54,50 @@ export default {
   methods: {
     addRecord(url) {
       const app = this
-      const api = [
-        '/api/post/id',
-        '/api/post/likes',
-        '/api/post/likes',
-        '/api/post/likes'
-      ]
+      //
+      const successState = (data) => {
+        return { state: 1, result: data }
+      }
+      //
+      const failState    = () => {
+        return { state: -1 }
+      }
       // make record
       let req = {
-        id:  counter.record ++,
+        id:   counter.record ++,
+        post: { state: 0, result: {}, api: '/api/post/id'       },
         submits: [
-          { state: 0, result: {} }, // /post/id    request
-          { state: 0, result: {} }, // /post/likes request
-          { state: 0, result: {} },
-          { state: 0, result: {} }
+              { state: 0, result: {}, api: '/api/post/shares'   },
+              { state: 0, result: {}, api: '/api/post/likes'    },
+              { state: 0, result: {}, api: '/api/post/comments' }
         ]
       }
       app.records.data = _.concat(req, app.records.data)
       // send requests
-      const configs = _.zip(api, req.submits)
-      const first   = _.head(configs)
-      postJson(first[0], {
+      postJson(req.post.api, {
         token: app.store.token,
         url:   url
       })
       .done(res => {
-        _.assign(first[1], { state: 1, result: res })
-        _(configs)
-        .tail()
-        .forEach(cfg => {
-          postJson(cfg[0], {
+        _.assign(req.post, successState(res))
+        _.forEach(req.submits, submit => {
+          postJson(submit.api, {
             token:  app.store.token,
             postid: res.postid
           })
           .done(data => {
-            _.assign(cfg[1], { state: 1, result: data })
+            _.assign(submit, successState(data))
           })
+          .fail(xhr => {
+            _.assign(submit, failState())
+          })
+        })
+      })
+      .fail(xhr => {
+        _.assign(req.post, failState())
+        _.forEach(req.submits, submit => {
+          _.assign(submit, failState())
+          window.console.log(submit.state)
         })
       })
     },

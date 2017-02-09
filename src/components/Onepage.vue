@@ -30,7 +30,6 @@
     </div>
     </form>
   </article>
-  <div class="ui basic segment">{{ { token: token, url: url } }}</div>
   <article v-if="records.length">
     <header class="ui dividing header">
       <h2>擷取紀錄</h2>
