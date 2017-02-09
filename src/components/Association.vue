@@ -1,25 +1,24 @@
 <template>
-<div id="association">
-  <form id="form" class="pure-form pure-form-aligned" method="post" enctype="multipart/form-data">
-    <fieldset>
-      <div v-for="(file, i) in files" :key="file.id" :data-tag="file.id" class="pure-control-group">
-        <label :for="'file' + i">檔案 {{ i }}</label>
-        <input :id="'file' + i" class="pure-input-1-2" type="file" :name="'file' + i" />
-        <button @click.prevent="delFile" :data-id="i" class="pure-button">刪除</button>
-      </div>
-    </fieldset>
-    <div class="pure-controls">
-      <button @click.prevent="addFile" class="pure-button">新增</button>
-      <button @click.prevent="associHandler" class="pure-button pure-button-primary">送出</button>
+<section id="association">
+  <form id="form" class="ui form" method="post" enctype="multipart/form-data">
+    <div v-for="(file, i) in files" :key="file.id" :data-tag="file.id" class="inline field">
+      <label :for="'file' + i">檔案 {{ i }}</label>
+      <input :id="'file' + i" class="pure-input-1-2" type="file" :name="'file' + i" />
+      <button class="ui button"
+        @click.prevent="delFile" :data-id="i">刪除</button>
     </div>
-    <div id="result">
+    <div class="field">
+      <button class="ui button" @click.prevent="addFile">新增</button>
+      <button class="ui primary button" @click.prevent="associHandler">送出</button>
+    </div>
+    <div id="result" class="ui basic segment">
       <div id="apriori" v-if="link">
-        <a class="pure-button" target="_blank" :href="link">下載關聯矩陣</a>
+        <a class="ui button" target="_blank" :href="link">下載關聯矩陣</a>
       </div>
       <div id="apriori" v-if="link2">
-        <a class="pure-button" target="_blank" :href="link2">下載關聯規則</a>
+        <a class="ui button" target="_blank" :href="link2">下載關聯規則</a>
       </div>
-      <table v-if="result.length" class="pure-table pure-table-bordered">
+      <table v-if="result.length" class="ui table">
       <thead>
         <tr>
           <th>Rules</th>
@@ -37,7 +36,7 @@
       </table>
     </div>
   </form>
-</div>
+</section>
 </template>
 
 <script>

@@ -4,6 +4,7 @@ from unicorn import *
 from os import path
 from bottle import Bottle, route
 import itertools
+import time
 
 # configs
 
@@ -177,6 +178,97 @@ def allposts_POST():
 	res = parser.getAllPosts(data)
 	return json.dumps(res)
 
+# write csv
+def myWriteCsv(filename, data):
+	csvfile = open(filename, 'w', encoding = 'utf-8')
+	writer  = csv.writer(csvfile)
+	for row in data:
+		writer.writerow(row)
+	csvfile.close()
+
+def myWriteCsvDict(filename, data):
+	# write csv
+	csvfile = open(filename, 'w', encoding = 'utf-8')
+	# write data into csv
+	if len(data) > 0:
+		writer = csv.DictWriter( csvfile, sorted(data[0].keys()) )
+		writer.writeheader()
+		for row in data:
+			writer.writerow(row)
+	csvfile.close()
+
+
+# post route
+
+@api.route('/post/id', method = 'POST')
+def post_id_POST():
+	data = bottle.request.json
+	# check token
+	if 'token' in data:
+		parser.setToken(data.get('token'))
+	# get posts id
+	postid = parser.getPostFullId(data.get('url'))
+	# return
+	return json.dumps(dict(postid = postid))
+
+## like route
+
+@api.route('/post/likes', method = 'POST')
+def post_likes_POST():
+	data = bottle.request.json
+	# check token
+	if 'token' in data:
+		parser.setToken(data.get('token'))
+	# get likes
+	nodeid = data.get('postid')
+	res    = parser.getNodeLikes(nodeid)
+	# 
+	dirs   = mkpath('.', 'downloads')
+	file   = '%s_likes.csv' % nodeid
+	# write csv
+	myWriteCsv(path.join(dirs, file), [ [x] for x in res.get('likes') ])
+	# return
+	return json.dumps(dict(
+		link  = file,
+		count = len(res.get('likes'))
+	))
+
+## 
+
+@api.route('/post/comments', method = 'POST')
+def post_comments_POST():
+	data = bottle.request.json
+	# check token
+	if 'token' in data:
+		parser.setToken(data.get('token'))
+	# get comments
+	nodeid = data.get('postid')
+	res    = parser.getNodeComments(nodeid)
+	# 
+	dirs   = mkpath('.', 'downloads')
+	file   = '%s_comments.csv' % nodeid
+	# write csv
+	myWriteCsvDict(path.join(dirs, file), res.get('comments'))
+	# return
+	return json.dumps(dict(
+		link  = file,
+		count = len(res.get('comments'))
+	))
+
+@api.route('/post/shares', method = 'POST')
+def post_shares_POST():
+	data = bottle.request.json
+	# check token
+	if 'token' in data:
+		parser.setToken(data.get('token'))
+	# get shares
+	nodeid = data.get('postid')
+	res    = parser.getNodeShares(nodeid)
+	# return
+	return json.dumps(dict(
+		count = res.get('shares').get('count')
+	))
+
 # all comments file
 
 @api.route('/allcomments/<nodeId>', method = 'GET')
@@ -222,20 +314,27 @@ def aprioriFiles(file):
 	dirs = mkpath('.', 'tmp', 'apriori')
 	return bottle.static_file(file, root = dirs, download = file)
 
+@api.route('/download/<file:path>', method = 'GET')
+def api_download_file(file):
+	dirs = path.join('.', 'downloads')
+	return bottle.static_file(file, root = dirs, download = file)
+
 # app
 
 app = Bottle()
 
-@app.route('/static/<file:path>')
-def appStaticFile(file):
-	dirs = path.join('.', 'dist', 'static')
-	return bottle.static_file(file, root = dirs)
-
 @app.route('/')
-def appRoot():
+def app_index():
 	dirs = path.join('.', 'dist')
 	file = 'index.html'
 	return bottle.static_file(file, root = dirs)
+
+@app.route('/static/<file:path>')
+def app_static_file(file):
+	dirs = path.join('.', 'dist', 'static')
+	return bottle.static_file(file, root = dirs)
+
+# setup api
 
 app.mount(__api_root__, api)
 
