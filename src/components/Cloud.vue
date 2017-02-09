@@ -1,13 +1,13 @@
 <template>
-<div id="cloud" class="cloud">
-  <form id="form" @submit.prevent="cloudHandler" class="pure-form pure-form-stacked" method="post" enctype="multipart/form-data">
-    <fieldset>
-      <input class="pure-input-1" id="data" type="file" name="data" />
-      <button type="submit" class="pure-button pure-button-primary">上傳</button>
-    </fieldset>
+<section id="cloud" class="cloud">
+  <form id="form" class="ui form" method="post" enctype="multipart/form-data" @submit.prevent="cloudHandler">
+    <div class="inline field">
+      <input id="data" type="file" name="data" />
+      <button type="submit" class="ui primary button">上傳</button>
+    </div>
   </form>
-  <div id="count" v-if="link">
-    <a class="pure-button" target="_blank" :href="link">下載</a>
+  <div id="count" v-show="link" class="ui basic segment">
+    <a class="ui button" target="_blank" :href="link">下載</a>
   </div>
   <div v-if="false">
     <textarea id="dd" cols="30" rows="10" v-model="will"></textarea>
@@ -22,10 +22,10 @@
     </div>
     <button @click.prevent="visualizeData" class="pure-button pure-button-primary">GO</button>
   </div>
-  <div class="canvas-container">
+  <div class="ui basic segment canvas-container">
     <canvas id="cloud" :width="width" :height="height"></canvas>
   </div>
-</div>
+</section>
 </template>
 
 <script>

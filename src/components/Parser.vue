@@ -1,47 +1,62 @@
 <template>
-<div id="parser">
-  <form id="form" class="pure-form pure-form-aligned">
-  <fieldset>
-    <div v-for="field in fields" class="pure-control-group">
-      <label :for="field.id">{{ field.name }}</label>
-      <input :type="field.type" :id="field.id">
-      <span v-if="'after' in field" v-html="field.after"></span>
+<section id="parser">
+  <header class="ui header">
+    <h1>資料蒐集</h1>
+  </header>
+  <article class="ui basic segment">
+    <header class="ui dividing header">
+      <h2>粉絲專頁</h2>
+    </header>
+    <form id="form" class="ui equal width form">
+      <div class="fields">
+        <div v-for="field in fields" class="field">
+          <label :for="field.id">{{ field.name }}</label>
+          <input :type="field.type" :id="field.id">
+          <label :for="field.id" v-if="'after' in field" v-html="field.after"></label>
+        </div>
+      </div>
+      <div class="field">
+        <button class="ui primary button"
+          @click.prevent="getAllPosts">送出</button>
+      </div>
+    </form>
+    <div id="msg" v-if="fetch" class="ui basic segment">
+      <p>共有 {{ result.length }} 筆結果。</p>
     </div>
-    <div class="pure-controls">
-      <button v-on:click.prevent="getAllPosts" class="pure-button pure-button-primary">送出</button>
-    </div>
-  </fieldset>
-  </form>
-  <div id="msg" v-if="fetch">
-    <p>共有 {{ result.length }} 筆結果。</p>
-  </div>
-  <table id="result" v-if="result.length" class="pure-table pure-table-bordered">
-  <thead>
-    <tr>
-      <th>#</th>
-      <th>id</th>
-      <th>create time</th>
-      <th>like count</th>
-      <th>comment count</th>
-      <th>share count</th>
-      <th>Link</th>
-      <th>Download</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr v-for="(row, i) in result" :key="i">
-      <td>{{ i }}</td>
-      <td>{{ row.id }}</td>
-      <td>{{ getTime(row.created_time) }}</td>
-      <td>{{ row.likes.summary.total_count }}</td>
-      <td>{{ row.comments.summary.total_count }}</td>
-      <td>{{ row.shares.count }}</td>
-      <td><a class="pure-button" target="_blank" :href="'https://www.facebook.com/' + row.id">連結</a></td>
-      <td><button class="pure-button pure-button-primary parser-download" :data-id="row.id" v-on:click="downloadListener">下載</button></td>
-    </tr>
-  </tbody>
-  </table>
-</div>
+    <table id="result" v-if="result.length" class="ui table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>id</th>
+        <th>create time</th>
+        <th>like count</th>
+        <th>comment count</th>
+        <th>share count</th>
+        <th>Link</th>
+        <th>Download</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr v-for="(row, i) in result" :key="i">
+        <td>{{ i }}</td>
+        <td>{{ row.id }}</td>
+        <td>{{ getTime(row.created_time) }}</td>
+        <td>{{ row.likes.summary.total_count }}</td>
+        <td>{{ row.comments.summary.total_count }}</td>
+        <td>{{ row.shares.count }}</td>
+        <td>
+          <a class="ui button" target="_blank"
+            :href="`https://www.facebook.com/${row.id}`">連結</a>
+        </td>
+        <td>
+          <button class="ui primary button parser-download"
+            :data-id="row.id" @click="downloadListener">下載</button>
+        </td>
+      </tr>
+    </tbody>
+    </table>
+  </article>
+</section>
 </template>
 
 <script>
@@ -49,13 +64,15 @@ import $ from 'jquery'
 import moment from 'moment'
 
 const fields = [
-  { id: 'token', type: 'text', name: 'Token', after: '<a target="_blank" href="https://developers.facebook.com/tools/explorer/">到此領取</a>' },
+  { id: 'token', type: 'text', name: 'Token', after: '<a target="_blank" href="https://developers.facebook.com/tools/explorer/">到此領取 token</a>' },
   { id: 'url',   type: 'text', name: '粉絲專頁連結' },
   { id: 'since', type: 'date', name: '開始時間' },
   { id: 'until', type: 'date', name: '結束時間' }
 ]
 
 export default {
+  name: 'parser',
+  props: [ 'appdata' ],
   data() {
     return {
       fields: fields,
@@ -63,7 +80,6 @@ export default {
       result: []
     }
   },
-  name: 'parser',
   methods: {
     getTime(str) {
       return moment(str).format('YYYY/MM/DD HH:mm:ss ZZ')
