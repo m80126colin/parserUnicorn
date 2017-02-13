@@ -45,7 +45,7 @@ export default {
         token: ''
       },
       records: {
-        header: ['', '文章連結', '分享數', '按讚數', '留言數'],
+        header: ['#', '文章連結', '分享數', '按讚數', '留言數'],
         size:   10,
         data:   []
       }

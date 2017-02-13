@@ -1,3 +1,3 @@
-from . import analysis, comments, utiltools
+from . import analysis, comments, utiltools, fbgraph
 
-__all__ = ['analysis', 'comments', 'utiltools']
+__all__ = ['analysis', 'comments', 'utiltools', 'fbgraph']

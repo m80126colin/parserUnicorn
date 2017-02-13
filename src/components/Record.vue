@@ -1,11 +1,11 @@
 <template>
-<table class="ui celled definition table">
+<table class="ui celled table">
   <thead>
     <tr><th v-for="h in header">{{ h }}</th></tr>
   </thead>
   <tbody>
     <tr v-for="r in records[page]">
-      <td>{{ r.id }}</td>
+      <td>{{ r.id + 1 }}</td>
       <td v-if="r.post.state === 1">
         <a target="_blank" :href="facebookLink(r.post.result.postid)">
           {{ r.post.result.postid }}
@@ -19,7 +19,7 @@
         <a class="ui tiny primary button"
           target="_blank" 
           v-if="s.result.link"
-          :href="downloadLink(s.result.link)">下載</a>
+          :href="s.result.link">下載</a>
       </td>
       <td v-else-if="s.state === -1" class="negative">失敗</td>
       <td v-else>
@@ -63,9 +63,6 @@ export default {
   methods: {
     facebookLink(postid) {
       return `https://www.facebook.com/${postid}`
-    },
-    downloadLink(link) {
-      return `/api/download/${link}`
     },
     toPage(e) {
       const app = this

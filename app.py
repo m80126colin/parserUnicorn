@@ -14,12 +14,35 @@ _host = 'localhost'
 _port = 5566
 
 # root url of api server
-_api_root  = '/api'
+class _api:
+	root     = 'api'
+	download = 'download'
+
+	post     = 'post'
+
+	@staticmethod
+	def url(*p):
+		return '/%s/%s' % (_api.root, '/'.join(p))
+
+	@staticmethod
+	def dl_url(*p):
+		return _api.url(_api.download, *p)
+
+	@staticmethod
+	def dl_list(*p):
+		return ['.', _api.download] + list(p)
+
+	@staticmethod
+	def dl_file(*p):
+		return path.join( _api.dl_list(*p) )
 
 # folder for wordcount and association rule
 _wc_folder = 'wordcount'
 _as_folder = 'apriori'
 _cm_folder = 'comment'
+
+_path_download   = ['.', 'downloads']
+_folder_download = path.join(*_path_download)
 
 _wc_paths  = ['.', 'tmp', _wc_folder]
 _as_paths  = ['.', 'tmp', _as_folder]
@@ -44,10 +67,6 @@ parser = uni.comments.Comments()
 
 api = Bottle()
 
-# apiPath
-def apiPath(*p):
-	return '%s/%s' % ( _api_root, '/'.join(p) )
-
 # word count by data
 def wordCountData(data):
 	raw = [ line.decode().strip() for line in data.file.readlines() ]
@@ -65,7 +84,7 @@ def cloud_POST():
 	# return
 	return dict(
 		list = json.dumps(res),
-		link = apiPath(_wc_folder, file)
+		link = _api.url(_wc_folder, file)
 	)
 
 
@@ -84,8 +103,8 @@ def associ_POST():
 	# return
 	return dict(
 		list  = json.dumps(res.get('result')[0:500]),
-		link  = apiPath(_as_folder, file),
-		link2 = apiPath(_as_folder, file2)
+		link  = _api.url(_as_folder, file),
+		link2 = _api.url(_as_folder, file2)
 	)
 
 # parser routes
@@ -100,77 +119,67 @@ def allposts_POST():
 	res = parser.getAllPosts(data)
 	return json.dumps(res)
 
-# post route
+######################################################################
+#  post route
+######################################################################
+
+# post id
 
 @api.route('/post/id', method = 'POST')
-def post_id_POST():
-	data = bottle.request.json
-	# check token
-	if 'token' in data:
-		parser.setToken(data.get('token'))
+def api_POST_post_id():
+	data   = bottle.request.json
+	args   = [ data.get('url'), data.get('token') ]
 	# get posts id
-	postid = parser.getPostFullId(data.get('url'))
+	postid = uni.fbgraph.getPostFullId(*args)
 	# return
-	return json.dumps(dict(postid = postid))
+	return json.dumps( dict(postid = postid) )
 
-## like route
+## post shares
+
+@api.route('/post/shares', method = 'POST')
+def api_POST_post_shares():
+	data  = bottle.request.json
+	args  = [ data.get('postid'), data.get('token') ]
+	# get shares
+	res   = uni.fbgraph.node.shares(*args)
+	count = res.get('shares').get('count')
+	# return
+	return json.dumps( dict(count = count) )
+
+## post likes
 
 @api.route('/post/likes', method = 'POST')
-def post_likes_POST():
+def api_POST_post_likes():
 	data = bottle.request.json
-	# check token
-	if 'token' in data:
-		parser.setToken(data.get('token'))
 	# get likes
 	nodeid = data.get('postid')
-	res    = parser.getNodeLikes(nodeid)
-	file   = '%s_likes.csv' % nodeid
+	res    = uni.fbgraph.node.likes(nodeid, data.get('token'))
 	# write csv
-	uni.utiltools.writeCsv(
-		[ [x] for x in res.get('likes') ],
-		_dl_paths,
-		file)
+	rec    = [ [x] for x in res.get('likes') ]
+	file   = '%s_likes.csv' % nodeid
+	uni.utiltools.writeCsv(rec, _api.dl_list(_api.post), file)
 	# return
 	return json.dumps(dict(
-		link  = file,
+		link  = _api.dl_url(_api.post, file),
 		count = len(res.get('likes'))
 	))
 
-## 
+## post comments
 
 @api.route('/post/comments', method = 'POST')
-def post_comments_POST():
-	data = bottle.request.json
-	# check token
-	if 'token' in data:
-		parser.setToken(data.get('token'))
+def api_POST_post_comments():
+	data   = bottle.request.json
 	# get comments
 	nodeid = data.get('postid')
-	res    = parser.getNodeComments(nodeid)
-	file   = '%s_comments.csv' % nodeid
+	res    = uni.fbgraph.node.comments(nodeid, data.get('token'))
 	# write csv
-	uni.utiltools.writeCsvDict(
-		res.get('comments'),
-		_dl_paths,
-		file)
+	rec    = res.get('comments')
+	file   = '%s_comments.csv' % nodeid
+	uni.utiltools.writeCsvDict(rec, _api.dl_list(_api.post), file)
 	# return
 	return json.dumps(dict(
-		link  = file,
+		link  = _api.dl_url(_api.post, file),
 		count = len(res.get('comments'))
-	))
-
-@api.route('/post/shares', method = 'POST')
-def post_shares_POST():
-	data = bottle.request.json
-	# check token
-	if 'token' in data:
-		parser.setToken(data.get('token'))
-	# get shares
-	nodeid = data.get('postid')
-	res    = parser.getNodeShares(nodeid)
-	# return
-	return json.dumps(dict(
-		count = res.get('shares').get('count')
 	))
 
 # all comments file
@@ -193,7 +202,9 @@ def allcomments_GET(nodeId):
 	# return downloadable file
 	return bottle.static_file(file, root = _cm_dirs, download = file)
 
-# word count file
+######################################################################
+#  word count file
+######################################################################
 
 @api.route('/%s/<file:path>' % _wc_folder, method = 'GET')
 def wordcountFiles(file):
@@ -203,10 +214,11 @@ def wordcountFiles(file):
 def aprioriFiles(file):
 	return bottle.static_file(file, root = _as_dirs, download = file)
 
-@api.route('/download/<file:path>', method = 'GET')
-def api_download_file(file):
-	dirs = path.join('.', 'downloads')
-	return bottle.static_file(file, root = dirs, download = file)
+@api.route('/%s/<paths:path>' % _api.download, method = 'GET')
+def api_download_file(paths):
+	dirs = _api.dl_list( *paths.split('/') )
+	folder, file = path.join(*dirs[:-1]), dirs[-1]
+	return bottle.static_file(file, root = folder, download = file)
 
 ######################################################################
 #
@@ -229,7 +241,7 @@ def app_static_file(file):
 
 # setup api
 
-app.mount(_api_root, api)
+app.mount(_api.root, api)
 
 # run app server at localhost:5566
 bottle.run(app, host = _host, port = _port)
