@@ -24,6 +24,7 @@ _cm_folder = 'comment'
 _wc_paths  = ['.', 'tmp', _wc_folder]
 _as_paths  = ['.', 'tmp', _as_folder]
 _cm_paths  = ['.', 'tmp', _cm_folder]
+_dl_paths  = ['.', 'downloads']
 
 # initialization
 
@@ -78,8 +79,8 @@ def associ_POST():
 	file    = uni.utiltools.writeCsvDict(res.get('table'), _as_paths)
 	file2   = uni.utiltools.writeCsvDict([ x
 		for x in res.get('result')
-		if x.get('support') >= 0.5 and x.get('confident') >= 0.5 ]
-		, _as_paths)
+		if x.get('support') >= 0.5 and x.get('confident') >= 0.5
+		], _as_paths)
 	# return
 	return dict(
 		list  = json.dumps(res.get('result')[0:500]),
@@ -98,26 +99,6 @@ def allposts_POST():
 
 	res = parser.getAllPosts(data)
 	return json.dumps(res)
-
-# write csv
-def myWriteCsv(filename, data):
-	csvfile = open(filename, 'w', encoding = 'utf-8')
-	writer  = csv.writer(csvfile)
-	for row in data:
-		writer.writerow(row)
-	csvfile.close()
-
-def myWriteCsvDict(filename, data):
-	# write csv
-	csvfile = open(filename, 'w', encoding = 'utf-8')
-	# write data into csv
-	if len(data) > 0:
-		writer = csv.DictWriter( csvfile, sorted(data[0].keys()) )
-		writer.writeheader()
-		for row in data:
-			writer.writerow(row)
-	csvfile.close()
-
 
 # post route
 
@@ -143,11 +124,12 @@ def post_likes_POST():
 	# get likes
 	nodeid = data.get('postid')
 	res    = parser.getNodeLikes(nodeid)
-	# 
-	dirs   = mkpath('.', 'downloads')
 	file   = '%s_likes.csv' % nodeid
 	# write csv
-	myWriteCsv(path.join(dirs, file), [ [x] for x in res.get('likes') ])
+	uni.utiltools.writeCsv(
+		[ [x] for x in res.get('likes') ],
+		_dl_paths,
+		file)
 	# return
 	return json.dumps(dict(
 		link  = file,
@@ -165,11 +147,12 @@ def post_comments_POST():
 	# get comments
 	nodeid = data.get('postid')
 	res    = parser.getNodeComments(nodeid)
-	# 
-	dirs   = mkpath('.', 'downloads')
 	file   = '%s_comments.csv' % nodeid
 	# write csv
-	myWriteCsvDict(path.join(dirs, file), res.get('comments'))
+	uni.utiltools.writeCsvDict(
+		res.get('comments'),
+		_dl_paths,
+		file)
 	# return
 	return json.dumps(dict(
 		link  = file,
@@ -203,7 +186,10 @@ def allcomments_GET(nodeId):
 	# get comments
 	res  = parser.getAllComments(nodeId)
 	# make path and filename of csv
-	file = writeCsvDict(res.get('data'), filename = '%s.csv' % nodeId)
+	file = uni.utiltools.writeCsvDict(
+		res.get('data'),
+		_cm_paths,
+		'%s.csv' % nodeId)
 	# return downloadable file
 	return bottle.static_file(file, root = _cm_dirs, download = file)
 
@@ -228,8 +214,6 @@ def api_download_file(file):
 #
 ######################################################################
 
-# app
-
 app = Bottle()
 
 @app.route('/')
@@ -245,7 +229,7 @@ def app_static_file(file):
 
 # setup api
 
-app.mount(__api_root__, api)
+app.mount(_api_root, api)
 
 # run app server at localhost:5566
 bottle.run(app, host = _host, port = _port)

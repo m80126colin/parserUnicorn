@@ -24,6 +24,7 @@ def _csvFilename(paths, data):
 
 def _writeCsvInterface(data, paths = ['.'], filename = None, dictOpt = False):
 	dirs = _mkpath(*paths)
+	# generate a hash filename when it is not specified
 	if filename is None:
 		file = _csvFilename(paths, data)
 	else:
