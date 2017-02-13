@@ -5,6 +5,12 @@ def __log__(message, mode = 'debug'):
 	if mode == 'log':
 		print(message, file = sys.stderr)
 
+def __commentForm__(comment, nodeid):
+	comment['parent'] = nodeid
+	comment['author'] = comment['from']['id']
+	del comment['from']
+	return comment
+
 class Comments:
 
 	# constructor
@@ -86,14 +92,14 @@ class Comments:
 		del obj['from']
 		return obj
 
-	# public methods
-
 	def __retrieveUrl__(self, url):
 		sp = [ x for x in parse.urlsplit(url).path.split('/') if x != '' ]
 		if len(sp) < 2:
 			__log__('[Retrieve] Invalid Url: %s' % url)
 			return None
 		return sp[0], sp[-1]
+
+	# public methods
 
 	def retrieveUrl(self, url):
 		spList = [ x for x in parse.urlsplit(url).path.split('/') if x != '' ]
@@ -107,14 +113,14 @@ class Comments:
 			res['post'] = spList[-1]
 		return res
 
-	def getPageId(self, name):
+	def getPageIdByName(self, name):
 		res = self.__graphAPICall__(name)
 		__log__(res)
 		return res.get('id')
 
 	def getAllPosts(self, data):
 		extUrl = self.retrieveUrl(data.get('url'))
-		pageId = self.getPageId(extUrl.get('page'))
+		pageId = self.getPageIdByName(extUrl.get('page'))
 
 		data.setdefault('since', '')
 		data.setdefault('until', '')
@@ -130,11 +136,6 @@ class Comments:
 
 	def setToken(self, token):
 		self.__init__(token)
-
-	def getPageIdByName(self, name):
-		res = self.__graphAPICall__(name)
-		__log__(res)
-		return res.get('id')
 
 	def getAllComments(self, nodeId):
 		total, lists = self.__getSummary__(nodeId)
@@ -155,16 +156,56 @@ class Comments:
 		__log__(comments)
 		return dict(id = nodeId, data = comments)
 
-	def getAll(self, url):
+	def getPostFullId(self, url):
 		# retrieve url
-		name, postId = self.__retrieveUrl__(url)
-		__log__('[Comment] Name: %s'    % name,   'log')
-		__log__('[Comment] Post Id: %s' % postId, 'log')
-		# get page id
-		pageId = self.getPageIdByName(name)
-		__log__('[Comment] Page Id: %s' % pageId, 'log')
+		name, postid = self.__retrieveUrl__(url)
+		__log__('[getPostFullId] Retrieve Url, Name: %s, Post ID: %s' % (name, postid), 'log')
+		# get page ID
+		pageid = self.getPageIdByName(name)
+		__log__('[getPostFullId] Page ID: %s' % pageid, 'log')
+		# return full ID
+		return '%s_%s' % (pageid, postid)
+
+	# Node
+
+	def getNodeLikes(self, nodeid):
+		node = '%s/likes' % nodeid
+		xs   = [ x.get('id')
+			for ls in self.__pagingByAfter__(node)
+			for x in ls ]
+		return dict(id = nodeid, likes = xs)
+
+	def getNodeComments(self, nodeid):
+		# node = '%s/comments' % nodeid
+		# xs   = [ __commentForm__(x, nodeid)
+		#	for ls in self.__pagingByAfter__(node)
+		#	for x in ls ]
+		# 
+		total, lists = self.__getSummary__(nodeid)
+		__log__('[getNodeComments] Total comments: %d' % total, 'log')
+		# get all comments
+		acc      = 0
+		comments = []
+		for c in lists:
+			node = c.get('id')
+			temp = [ __commentForm__(x, node)
+				for ls in self.__pagingByAfter__('%s/comments' % node)
+				for x in ls ]
+			acc      = acc + c.get('comment_count')
+			comments = comments + temp
+			__log__('[getNodeComments] Progress: %d/%d' % (acc, total), 'log')
+		# return
+		__log__(comments)
+		return dict(id = nodeid, comments = comments)
+
+	def getNodeShares(self, nodeid):
+		res = self.__graphAPICall__(nodeid, fields = 'shares')
+		__log__(res, 'log')
+		return dict(id = nodeid, shares = res.get('shares'))
+
+	def getAll(self, url):
 		# get summary
-		nodeId = '%s_%s' % (pageId, postId)
+		nodeId = self.getPostFullId(url)
 		total, lists = self.__getSummary__(nodeId)
 		__log__('[Comment] Total comments: %d' % total, 'log')
 		# get all comments
