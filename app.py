@@ -113,10 +113,8 @@ def associ_POST():
 @api.route('/allposts', method = 'POST')
 def allposts_POST():
 	data = bottle.request.json
-	if 'token' in data:
-		parser.setToken(data.get('token'))
-
-	res = parser.getAllPosts(data)
+	res = uni.fbgraph.getAllPosts(data, data.get('token'))
+	# return
 	return json.dumps(res)
 
 ######################################################################

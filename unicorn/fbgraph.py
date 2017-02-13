@@ -72,6 +72,7 @@ def _retrieveUrl(url):
 		return None
 	if '-' in ls[0]:
 		ls[0] = ls[0].split('-')[-1]
+	_log('[retrieveUrl] Name: %s, Post ID: %s' % (ls[0], ls[-1]), 'log')
 	return ls[0], ls[-1]
 
 def _commentForm(comment, nodeid):
@@ -101,19 +102,35 @@ def _getCommentSummary(nodeid, token):
 def _getPostFullId(url, token):
 	# retrieve url
 	name, postid = _retrieveUrl(url)
-	_log('[getPostFullId] Retrieve Url, Name: %s, Post ID: %s' % (name, postid), 'log')
 	# get page ID
 	pageid = _getPageIdByName(name, token)
 	_log('[getPostFullId] Page ID: %s' % pageid, 'log')
 	# return full ID
 	return '%s_%s' % (pageid, postid)
 
+def _getAllPosts(data, token):
+	name, post = _retrieveUrl(data.get('url'))
+	pageid     = _getPageIdByName(name, token)
+
+	data.setdefault('since', '')
+	data.setdefault('until', '')
+
+	fids = ['id', 'created_time', 'comments.limit(0).summary(1)', 'likes.limit(0).summary(1)', 'shares']
+	res = [ x
+		for ls in _paging.next('%s/posts' % pageid, token,
+			fields = ','.join(fids),
+			since  = data.get('since'),
+			until  = data.get('until'),
+			limit  = 100)
+		for x in ls ]
+	return res
 
 # exports
 
 retrieveUrl     = _retrieveUrl
 getPageIdByName = _getPageIdByName
 getPostFullId   = _getPostFullId
+getAllPosts     = _getAllPosts
 
 # Node
 
@@ -152,8 +169,3 @@ class node:
 		# return
 		_log(comments)
 		return dict(id = nodeid, comments = comments)
-
-def _getNodeShares(nodeid, token):
-	res = _graphAPICall(nodeid, token, fields = 'shares')
-	_log(res, 'log')
-	return dict(id = nodeid, shares = res.get('shares'))

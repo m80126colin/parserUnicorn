@@ -9,15 +9,7 @@
     </header>
     <form class="ui equal width form">
     <div class="fields">
-      <div class="field">
-        <label for="token">Token</label>
-        <input type="text" name="token"
-          :value="appdata.store.token"
-          @input="$emit('setToken', $event.target.value)" />
-        <label for="token">
-          <a target="_blank" href="https://developers.facebook.com/tools/explorer/">到此領取 token</a>
-        </label>
-      </div>
+      <token :appdata="appdata"></token>
       <div class="field">
         <label for="url">文章連結</label>
         <input type="text" name="url" v-model="url" />
@@ -40,25 +32,25 @@
 </template>
 
 <script>
+import Token  from './Token'
 import Record from './Record'
 
 export default {
   name: 'onepage',
   props: [ 'appdata' ],
-  components: { Record },
+  components: { Token, Record },
   data() {
     return {
       url: ''
     }
   },
   computed: {
-    token()   { return this.appdata.store.token  },
     records() { return this.appdata.records.data }
   },
   methods: {
     recordSubmit(e) {
       const app = this
-      app.$emit('addRecord', app.url)
+      app.$root.$emit('record_add', app.url)
       app.url = ''
     }
   }

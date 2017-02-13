@@ -3,11 +3,7 @@
   <div class="two wide column"></div>
   <div class="twelve wide column">
     <navbar></navbar>
-    <router-view
-      :appdata="$data"
-      @addRecord="addRecord"
-      @setRecordPageSize="setRecordPageSize"
-      @setToken="setToken"></router-view>
+    <router-view :appdata="$data"></router-view>
   </div>
   <div class="two wide column"></div>
 </div>
@@ -50,6 +46,14 @@ export default {
         data:   []
       }
     }
+  },
+  created() {
+    const app = this
+    //
+    app.$root
+    .$on('set_token',       app.setToken)
+    .$on('record_set_size', app.setRecordPageSize)
+    .$on('record_add',      app.addRecord)
   },
   methods: {
     addRecord(url) {

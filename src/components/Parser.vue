@@ -9,10 +9,18 @@
     </header>
     <form id="form" class="ui equal width form">
       <div class="fields">
-        <div v-for="field in fields" class="field">
-          <label :for="field.id">{{ field.name }}</label>
-          <input :type="field.type" :id="field.id">
-          <label :for="field.id" v-if="'after' in field" v-html="field.after"></label>
+        <token :appdata="appdata"></token>
+        <div class="field">
+          <label for="url">粉絲專頁連結</label>
+          <input type="text" name="url" v-model="req.url">
+        </div>
+        <div class="field">
+          <label for="since">開始時間</label>
+          <input type="date" name="since" v-model="req.since">
+        </div>
+        <div class="field">
+          <label for="until">結束時間</label>
+          <input type="date" name="until" v-model="req.until">
         </div>
       </div>
       <div class="field">
@@ -60,24 +68,32 @@
 </template>
 
 <script>
+import Token from './Token'
+
+import _ from 'lodash'
 import $ from 'jquery'
 import moment from 'moment'
 
 const fields = [
-  { id: 'token', type: 'text', name: 'Token', after: '<a target="_blank" href="https://developers.facebook.com/tools/explorer/">到此領取 token</a>' },
   { id: 'url',   type: 'text', name: '粉絲專頁連結' },
-  { id: 'since', type: 'date', name: '開始時間' },
-  { id: 'until', type: 'date', name: '結束時間' }
+  { id: 'since', type: 'date', name: '開始時間'     },
+  { id: 'until', type: 'date', name: '結束時間'     }
 ]
 
 export default {
   name: 'parser',
   props: [ 'appdata' ],
+  components: { Token },
   data() {
     return {
       fields: fields,
       fetch:  false,
-      result: []
+      result: [],
+      req: {
+        url:   '',
+        since: '',
+        until: ''
+      }
     }
   },
   methods: {
@@ -85,12 +101,13 @@ export default {
       return moment(str).format('YYYY/MM/DD HH:mm:ss ZZ')
     },
     getAllPosts(e) {
-      let app = this
-      // retrieve form data
-      var keys = fields.map(item => item.id)
-      var data = {}
-      keys.forEach(key => {
-        data[key] = $('#' + key).val()
+      const app  = this
+      const data = _.assign({ token: app.appdata.store.token }, app.req)
+      // reset req
+      _.assign(app.req, {
+        url:   '',
+        since: '',
+        until: ''
       })
       // send POST /allposts request
       $.ajax({
