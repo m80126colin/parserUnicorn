@@ -1,5 +1,6 @@
 import jieba, os
 from os import path
+import itertools
 
 _dict_path = path.join(path.dirname(path.realpath(__file__)), 'dictionary')
 
@@ -15,6 +16,50 @@ def __loadStopwords__(filename):
 	return {}.fromkeys(sw)
 
 stopwords = __loadStopwords__('stopwords.txt')
+
+def intersect(dataset):
+	print('[Intersect] Start processing intersect ...')
+	# unique id list
+	id_list    = [ [key, len(list(group))]
+		for key, group in itertools.groupby(
+			sorted([ x for data in dataset for x in data ]))
+	]
+	# dictionary for id
+	size       = len(id_list)
+	id_dict    = dict()
+	for i in range(size):
+		id_dict[ id_list[i][0] ] = i
+	# translate dataset into id
+	id_dataset = [ [ id_dict[x] for x in data ] for data in dataset ]
+	# calulate intersection between data
+	print('[Intersect] Start calculating intersection ...')
+	size          = len(id_dataset)
+	article_count = [ len(data) for data in dataset ]
+	article       = [ [
+		list(set(id_dataset[i]) & set(id_dataset[j]))
+		for j in range(size) ]
+		for i in range(size) ]
+	# first 100
+	print('[Intersect] Start calculating intersect between people ...')
+	## valid id list
+	valid_id_list = [ x
+		for x in sorted(id_list, key = lambda x : -x[1])
+		if x[1] > 1
+	]
+	peo_list = [ id_dict[ x[0] ] for x in valid_id_list[:100] ]
+	size     = len(peo_list)
+	people   = [ [
+		sum(1 if peo_list[i] in data and peo_list[j] in data else 0 for data in id_dataset)
+		for j in range(size) ]
+		for i in range(size) ]
+	print('[Intersect] Done!')
+	# return
+	return dict(
+		list          = id_list,
+		article       = article,
+		article_count = article_count,
+		people        = people,
+		peo_list      = peo_list)
 
 def __wordCounts__(xs):
 	res = dict()

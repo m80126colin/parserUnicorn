@@ -92,7 +92,6 @@ export default {
     getAllPosts(e) {
       const app  = this
       const data = _.assign({ token: app.appdata.store.token }, app.req)
-      window.console.log(JSON.stringify(app.req))
       // send POST /allposts request
       $.ajax({
         type:        'POST',

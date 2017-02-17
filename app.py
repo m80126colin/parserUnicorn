@@ -15,10 +15,11 @@ _port = 5566
 
 # root url of api server
 class _api:
-	root     = 'api'
-	download = 'download'
+	root      = 'api'
+	download  = 'download'
 
-	post     = 'post'
+	post      = 'post'
+	intersect = 'intersect'
 
 	@staticmethod
 	def url(*p):
@@ -29,12 +30,12 @@ class _api:
 		return _api.url(_api.download, *p)
 
 	@staticmethod
-	def dl_list(*p):
+	def dl_path(*p):
 		return ['.', _api.download] + list(p)
 
 	@staticmethod
 	def dl_file(*p):
-		return path.join( _api.dl_list(*p) )
+		return path.join( _api.dl_path(*p) )
 
 # folder for wordcount and association rule
 _wc_folder = 'wordcount'
@@ -109,13 +110,46 @@ def associ_POST():
 
 # parser routes
 
-
 @api.route('/allposts', method = 'POST')
 def allposts_POST():
 	data = bottle.request.json
-	res = uni.fbgraph.getAllPosts(data, data.get('token'))
+	res  = uni.fbgraph.getAllPosts(data, data.get('token'))
 	# return
 	return json.dumps(res)
+
+######################################################################
+#  intersect route
+######################################################################
+
+def lineData(data):
+	raw = [ line.decode().strip() for line in data.file.readlines() ]
+	return raw
+
+@api.route('/intersect', method = 'POST')
+def api_POST_intersect():
+	files   = bottle.request.files
+	dataset = [ lineData(files.get(file)) for file in files ]
+	# calculate intersection
+	result  = uni.analysis.intersect(dataset)
+	# make csv
+	people  = [ result.get('list')[idx][0] for idx in result.get('peo_list') ]
+	## make data
+	data    = []
+	data.append(['#'] + people)
+	size    = len(people)
+	for i in range(size):
+		data.append([ people[i] ] + result.get('people')[i])
+	# write csv
+	file    = uni.utiltools.writeCsv(data, _api.dl_path(_api.intersect))
+	# return
+	return json.dumps(dict(
+		link          = _api.dl_url(_api.intersect, file),
+		list          = result.get('list'),
+		peo_list      = result.get('peo_list'),
+		article       = result.get('article'),
+		article_count = result.get('article_count'),
+		people        = result.get('people')
+	))
 
 ######################################################################
 #  post route
@@ -155,7 +189,7 @@ def api_POST_post_likes():
 	# write csv
 	rec    = [ [x] for x in res.get('likes') ]
 	file   = '%s_likes.csv' % nodeid
-	uni.utiltools.writeCsv(rec, _api.dl_list(_api.post), file)
+	uni.utiltools.writeCsv(rec, _api.dl_path(_api.post), file)
 	# return
 	return json.dumps(dict(
 		link  = _api.dl_url(_api.post, file),
@@ -173,14 +207,16 @@ def api_POST_post_comments():
 	# write csv
 	rec    = res.get('comments')
 	file   = '%s_comments.csv' % nodeid
-	uni.utiltools.writeCsvDict(rec, _api.dl_list(_api.post), file)
+	uni.utiltools.writeCsvDict(rec, _api.dl_path(_api.post), file)
 	# return
 	return json.dumps(dict(
 		link  = _api.dl_url(_api.post, file),
 		count = len(res.get('comments'))
 	))
 
-# all comments file
+######################################################################
+#  all comments route
+######################################################################
 
 @api.route('/allcomments/<nodeId>', method = 'GET')
 def allcomments_GET(nodeId):
@@ -214,7 +250,7 @@ def aprioriFiles(file):
 
 @api.route('/%s/<paths:path>' % _api.download, method = 'GET')
 def api_download_file(paths):
-	dirs = _api.dl_list( *paths.split('/') )
+	dirs = _api.dl_path( *paths.split('/') )
 	folder, file = path.join(*dirs[:-1]), dirs[-1]
 	return bottle.static_file(file, root = folder, download = file)
 
