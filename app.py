@@ -1,325 +1,264 @@
-import os, json, io, csv, hashlib
-import bottle
-from unicorn import *
-from os import path
+import bottle, json, csv
 from bottle import Bottle, route
-import itertools
-import time
+from os import path
+import unicorn as uni
 
-# configs
+######################################################################
+#
+#  configs
+#
+######################################################################
 
-__api_root__ = '/api'
+# server hostname and port
+_host = 'localhost'
+_port = 5566
 
-# utils
+# root url of api server
+class _api:
+	root      = 'api'
+	download  = 'download'
 
-def mkpath(*paths):
-	dirs = ''
-	for p in paths:
-		dirs = path.join(dirs, p)
-		if not path.exists(dirs):
-			os.makedirs(dirs)
-	return dirs
+	post      = 'post'
+	intersect = 'intersect'
 
-def make_dict(lst, wc):
-	res = dict()
-	for w in lst:
-		res[w] = 0
+	@staticmethod
+	def url(*p):
+		return '/%s/%s' % (_api.root, '/'.join(p))
 
-	for it in wc:
-		res[ it[0] ] = it[1]
+	@staticmethod
+	def dl_url(*p):
+		return _api.url(_api.download, *p)
 
-	return res
+	@staticmethod
+	def dl_path(*p):
+		return ['.', _api.download] + list(p)
 
-def ano_make_dict(lst, tbl):
-	res = []
-	tmp = dict()
-	for idx in range(len(lst)):
-		tmp[idx] = lst[idx]
-	res.append(tmp)
+	@staticmethod
+	def dl_file(*p):
+		return path.join( _api.dl_path(*p) )
 
-	for x in tbl:
-		tmp = dict()
-		for idx in range(len(lst)):
-			tmp[idx] = x.get(lst[idx])
-		res.append(tmp)
+# folder for wordcount and association rule
+_wc_folder = 'wordcount'
+_as_folder = 'apriori'
+_cm_folder = 'comment'
 
-	return res
+_path_download   = ['.', 'downloads']
+_folder_download = path.join(*_path_download)
 
-def countField(tbl, f):
-	return sum([ 1 if row.get(f) > 0 else 0 for row in tbl ])
+_wc_paths  = ['.', 'tmp', _wc_folder]
+_as_paths  = ['.', 'tmp', _as_folder]
+_cm_paths  = ['.', 'tmp', _cm_folder]
+_dl_paths  = ['.', 'downloads']
 
-def sumField(tbl, f):
-	return sum([ row.get(f) for row in tbl ])
+# initialization
 
-def sumFieldIf(tbl, f1, f2):
-	return sum([ min([row.get(f1), row.get(f2)]) for row in tbl if row.get(f2) > 0 ])
+## directory for wordcount and association rule
+_wc_dirs   = uni.utiltools.mkpath(*_wc_paths)
+_as_dirs   = uni.utiltools.mkpath(*_as_paths)
+_cm_dirs   = uni.utiltools.mkpath(*_cm_paths)
 
-def apriori(dataset):
-	selects = [ sorted(x, key = lambda it : -it[1])[0:50] for x in dataset ]
+## parser
+parser = uni.comments.Comments()
 
-	word_list = list()
-	for x in selects:
-		word_list = list(set(word_list) | set([ y[0] for y in x ]))
-
-	def_dict = dict()
-	for word in word_list:
-		def_dict[word] = 0
-
-	table = [ make_dict(word_list, x) for x in dataset ]
-
-	another_table = ano_make_dict(word_list, table)
-
-	gen = [ dict(
-		itema     = wa,
-		itemb     = wb,
-		support   = round(countField(table, wa) / len(table), 2),
-		confident = round(sumFieldIf(table, wa, wb) / sumField(table, wa), 2)
-		) for (wa, wb) in itertools.combinations(word_list, 2) if sumField(table, wa) > 0 ]
-
-	res = sorted(gen, key = lambda x : - (x.get('support') + x.get('confident')) )
-
-	return dict(table = another_table, result = res)
-
-# api
+######################################################################
+#
+#  api
+#
+######################################################################
 
 api = Bottle()
-
-# write a csv file with md5 filename
-
-def writeWordCountCsv(data):
-	# md5
-	m = hashlib.md5()
-	m.update( repr(data).encode() )
-	# make csv
-	dirs = mkpath('.', 'tmp', 'wordcount')
-	file = '%s.csv' % m.hexdigest()
-	# write csv
-	csvfile = open(path.join(dirs, file), 'w', encoding = 'utf-8')
-	writer  = csv.writer(csvfile)
-	for row in data:
-		writer.writerow(row)
-	csvfile.close()
-	# return filename
-	return file
 
 # word count by data
 def wordCountData(data):
 	raw = [ line.decode().strip() for line in data.file.readlines() ]
 	# word count
-	res  = clouds.wordCount(raw)
-	return res
+	return uni.analysis.wordCount(raw)
 
 # cloud route
 
 @api.route('/cloud', method = 'POST')
 def cloud_POST():
-	data = bottle.request.files.get('data')
-	res  = wordCountData(data)
+	data   = bottle.request.files.get('data')
+	res    = wordCountData(data)
 	# write into csv
-	file = writeWordCountCsv(res)
+	file   = uni.utiltools.writeCsv(res, _wc_paths)
 	# return
-	link = __api_root__ + '/wordcount/' + file
-	return dict(list = json.dumps(res), link = link)
+	return dict(
+		list = json.dumps(res),
+		link = _api.url(_wc_folder, file)
+	)
 
-
-def writeCsvDict(res):
-	# md5
-	m = hashlib.md5()
-	m.update( repr(res).encode() )
-	# make csv
-	dirs = mkpath('.', 'tmp', 'apriori')
-	file = '%s.csv' % m.hexdigest()
-	# write csv
-	csvfile = open(path.join(dirs, file), 'w', encoding = 'utf-8')
-	# write data into csv
-	data = res
-	if len(data) > 0:
-		writer = csv.DictWriter( csvfile, sorted(data[0].keys()) )
-		writer.writeheader()
-		for row in data:
-			writer.writerow(row)
-	csvfile.close()
-	# return filename
-	return file
-
-# def wordCountData2(data):
-	# raw = [ line.decode().strip() for line in data.file.readlines() ]
-	# r = csv.reader([data.file.read().decode()])
-	# res = [ x for x in r if x != [] ]
-	# print(res)
-	# return res
 
 @api.route('/associ', method = 'POST')
 def associ_POST():
-	files = bottle.request.files
+	files   = bottle.request.files
 	dataset = [ wordCountData(files.get(file)) for file in files ]
 	# apriori
-	res = apriori(dataset)
+	res     = uni.analysis.apriori(dataset)
 	# make csv
-	file  = writeCsvDict(res.get('table'))
-	file2 = writeCsvDict([ x
+	file    = uni.utiltools.writeCsvDict(res.get('table'), _as_paths)
+	file2   = uni.utiltools.writeCsvDict([ x
 		for x in res.get('result')
-		if x.get('support') >= 0.5 and x.get('confident') >= 0.5 ])
+		if x.get('support') >= 0.5 and x.get('confident') >= 0.5
+		], _as_paths)
 	# return
-	link  = __api_root__ + '/apriori/' + file
-	link2 = __api_root__ + '/apriori/' + file2
-	return dict(list = json.dumps(res.get('result')[0:500]), link = link, link2 = link2)
+	return dict(
+		list  = json.dumps(res.get('result')[0:500]),
+		link  = _api.url(_as_folder, file),
+		link2 = _api.url(_as_folder, file2)
+	)
 
 # parser routes
-
-parser = comments.Comments()
 
 @api.route('/allposts', method = 'POST')
 def allposts_POST():
 	data = bottle.request.json
-	if 'token' in data:
-		parser.setToken(data.get('token'))
-
-	res = parser.getAllPosts(data)
+	res  = uni.fbgraph.getAllPosts(data, data.get('token'))
+	# return
 	return json.dumps(res)
 
-# write csv
-def myWriteCsv(filename, data):
-	csvfile = open(filename, 'w', encoding = 'utf-8')
-	writer  = csv.writer(csvfile)
-	for row in data:
-		writer.writerow(row)
-	csvfile.close()
+######################################################################
+#  intersect route
+######################################################################
 
-def myWriteCsvDict(filename, data):
+def lineData(data):
+	raw = [ line.decode().strip() for line in data.file.readlines() ]
+	return raw
+
+@api.route('/intersect', method = 'POST')
+def api_POST_intersect():
+	files   = bottle.request.files
+	dataset = [ lineData(files.get(file)) for file in files ]
+	# calculate intersection
+	result  = uni.analysis.intersect(dataset)
+	# make csv
+	people  = [ result.get('list')[idx][0] for idx in result.get('peo_list') ]
+	## make data
+	data    = []
+	data.append(['#'] + people)
+	size    = len(people)
+	for i in range(size):
+		data.append([ people[i] ] + result.get('people')[i])
 	# write csv
-	csvfile = open(filename, 'w', encoding = 'utf-8')
-	# write data into csv
-	if len(data) > 0:
-		writer = csv.DictWriter( csvfile, sorted(data[0].keys()) )
-		writer.writeheader()
-		for row in data:
-			writer.writerow(row)
-	csvfile.close()
-
-
-# post route
-
-@api.route('/post/id', method = 'POST')
-def post_id_POST():
-	data = bottle.request.json
-	# check token
-	if 'token' in data:
-		parser.setToken(data.get('token'))
-	# get posts id
-	postid = parser.getPostFullId(data.get('url'))
-	# return
-	return json.dumps(dict(postid = postid))
-
-## like route
-
-@api.route('/post/likes', method = 'POST')
-def post_likes_POST():
-	data = bottle.request.json
-	# check token
-	if 'token' in data:
-		parser.setToken(data.get('token'))
-	# get likes
-	nodeid = data.get('postid')
-	res    = parser.getNodeLikes(nodeid)
-	# 
-	dirs   = mkpath('.', 'downloads')
-	file   = '%s_likes.csv' % nodeid
-	# write csv
-	myWriteCsv(path.join(dirs, file), [ [x] for x in res.get('likes') ])
+	file    = uni.utiltools.writeCsv(data, _api.dl_path(_api.intersect))
 	# return
 	return json.dumps(dict(
-		link  = file,
+		link          = _api.dl_url(_api.intersect, file),
+		list          = result.get('list'),
+		peo_list      = result.get('peo_list'),
+		article       = result.get('article'),
+		article_count = result.get('article_count'),
+		people        = result.get('people')
+	))
+
+######################################################################
+#  post route
+######################################################################
+
+# post id
+
+@api.route('/post/id', method = 'POST')
+def api_POST_post_id():
+	data   = bottle.request.json
+	args   = [ data.get('url'), data.get('token') ]
+	# get posts id
+	postid = uni.fbgraph.getPostFullId(*args)
+	# return
+	return json.dumps( dict(postid = postid) )
+
+## post shares
+
+@api.route('/post/shares', method = 'POST')
+def api_POST_post_shares():
+	data  = bottle.request.json
+	args  = [ data.get('postid'), data.get('token') ]
+	# get shares
+	res   = uni.fbgraph.node.shares(*args)
+	count = res.get('shares').get('count')
+	# return
+	return json.dumps( dict(count = count) )
+
+## post likes
+
+@api.route('/post/likes', method = 'POST')
+def api_POST_post_likes():
+	data = bottle.request.json
+	# get likes
+	nodeid = data.get('postid')
+	res    = uni.fbgraph.node.likes(nodeid, data.get('token'))
+	# write csv
+	rec    = [ [x] for x in res.get('likes') ]
+	file   = '%s_likes.csv' % nodeid
+	uni.utiltools.writeCsv(rec, _api.dl_path(_api.post), file)
+	# return
+	return json.dumps(dict(
+		link  = _api.dl_url(_api.post, file),
 		count = len(res.get('likes'))
 	))
 
-## 
+## post comments
 
 @api.route('/post/comments', method = 'POST')
-def post_comments_POST():
-	data = bottle.request.json
-	# check token
-	if 'token' in data:
-		parser.setToken(data.get('token'))
+def api_POST_post_comments():
+	data   = bottle.request.json
 	# get comments
 	nodeid = data.get('postid')
-	res    = parser.getNodeComments(nodeid)
-	# 
-	dirs   = mkpath('.', 'downloads')
-	file   = '%s_comments.csv' % nodeid
+	res    = uni.fbgraph.node.comments(nodeid, data.get('token'))
 	# write csv
-	myWriteCsvDict(path.join(dirs, file), res.get('comments'))
+	rec    = res.get('comments')
+	file   = '%s_comments.csv' % nodeid
+	uni.utiltools.writeCsvDict(rec, _api.dl_path(_api.post), file)
 	# return
 	return json.dumps(dict(
-		link  = file,
+		link  = _api.dl_url(_api.post, file),
 		count = len(res.get('comments'))
 	))
 
-@api.route('/post/shares', method = 'POST')
-def post_shares_POST():
-	data = bottle.request.json
-	# check token
-	if 'token' in data:
-		parser.setToken(data.get('token'))
-	# get shares
-	nodeid = data.get('postid')
-	res    = parser.getNodeShares(nodeid)
-	# return
-	return json.dumps(dict(
-		count = res.get('shares').get('count')
-	))
-
-# all comments file
+######################################################################
+#  all comments route
+######################################################################
 
 @api.route('/allcomments/<nodeId>', method = 'GET')
 def allcomments_GET(nodeId):
 	# get data
 	data = bottle.request.query
 	print(data)
-
 	# retrieve token
 	if 'token' in data:
 		parser.setToken(data.get('token'))
-
 	# get comments
 	res  = parser.getAllComments(nodeId)
-
 	# make path and filename of csv
-	dirs = mkpath('.', 'tmp', 'comment')
-	file = '%s.csv' % nodeId
-	print('Filename:', file)
-
-	csvfile = open(path.join(dirs, file), 'w', encoding = 'utf-8')
-	# write data into csv
-	data = res.get('data')
-	if len(data) > 0:
-		writer = csv.DictWriter( csvfile, sorted(data[0].keys()) )
-		writer.writeheader()
-		for row in data:
-			writer.writerow(row)
-	csvfile.close()
-
+	file = uni.utiltools.writeCsvDict(
+		res.get('data'),
+		_cm_paths,
+		'%s.csv' % nodeId)
 	# return downloadable file
-	return bottle.static_file(file, root = dirs, download = file)
+	return bottle.static_file(file, root = _cm_dirs, download = file)
 
-# word count file
+######################################################################
+#  word count file
+######################################################################
 
-@api.route('/wordcount/<file:path>', method = 'GET')
-def wordCountFiles(file):
-	dirs = mkpath('.', 'tmp', 'wordcount')
-	return bottle.static_file(file, root = dirs, download = file)
+@api.route('/%s/<file:path>' % _wc_folder, method = 'GET')
+def wordcountFiles(file):
+	return bottle.static_file(file, root = _wc_dirs, download = file)
 
-@api.route('/apriori/<file:path>', method = 'GET')
+@api.route('/%s/<file:path>' % _as_folder, method = 'GET')
 def aprioriFiles(file):
-	dirs = mkpath('.', 'tmp', 'apriori')
-	return bottle.static_file(file, root = dirs, download = file)
+	return bottle.static_file(file, root = _as_dirs, download = file)
 
-@api.route('/download/<file:path>', method = 'GET')
-def api_download_file(file):
-	dirs = path.join('.', 'downloads')
-	return bottle.static_file(file, root = dirs, download = file)
+@api.route('/%s/<paths:path>' % _api.download, method = 'GET')
+def api_download_file(paths):
+	dirs = _api.dl_path( *paths.split('/') )
+	folder, file = path.join(*dirs[:-1]), dirs[-1]
+	return bottle.static_file(file, root = folder, download = file)
 
-# app
+######################################################################
+#
+#  app
+#
+######################################################################
 
 app = Bottle()
 
@@ -336,7 +275,7 @@ def app_static_file(file):
 
 # setup api
 
-app.mount(__api_root__, api)
+app.mount(_api.root, api)
 
 # run app server at localhost:5566
-bottle.run(app, host = 'localhost', port = 5566)
+bottle.run(app, host = _host, port = _port)
