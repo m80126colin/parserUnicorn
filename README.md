@@ -4,7 +4,9 @@
 
 A facebook fan page parser and word cloud in Python.
 
-## Installation
+## Setup
+
+### Installation
 
 ``` bash
 git clone git@github.com:m80126colin/parserUnicorn.git
@@ -12,7 +14,7 @@ cd parserUnicorn/
 pip3 install requests bottle jieba
 ```
 
-## Build
+### Build
 
 Use Node.JS to build website if there is no `dist/` directory.
 
@@ -21,7 +23,7 @@ npm install
 npm run build
 ```
 
-## Execution
+### Execution
 
 ``` bash
 python3 app.py

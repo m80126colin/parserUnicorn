@@ -9,10 +9,18 @@
     </header>
     <form id="form" class="ui equal width form">
       <div class="fields">
-        <div v-for="field in fields" class="field">
-          <label :for="field.id">{{ field.name }}</label>
-          <input :type="field.type" :id="field.id">
-          <label :for="field.id" v-if="'after' in field" v-html="field.after"></label>
+        <token :appdata="appdata"></token>
+        <div class="field">
+          <label for="url">粉絲專頁連結</label>
+          <input type="text" name="url" v-model="req.url">
+        </div>
+        <div class="field">
+          <label for="since">開始時間</label>
+          <input type="date" name="since" v-model="req.since">
+        </div>
+        <div class="field">
+          <label for="until">結束時間</label>
+          <input type="date" name="until" v-model="req.until">
         </div>
       </div>
       <div class="field">
@@ -20,35 +28,25 @@
           @click.prevent="getAllPosts">送出</button>
       </div>
     </form>
-    <div id="msg" v-if="fetch" class="ui basic segment">
+    <div v-if="result.length" class="ui basic segment">
       <p>共有 {{ result.length }} 筆結果。</p>
     </div>
-    <table id="result" v-if="result.length" class="ui table">
+    <table v-if="result.length" class="ui table">
     <thead>
       <tr>
-        <th>#</th>
-        <th>id</th>
-        <th>create time</th>
-        <th>like count</th>
-        <th>comment count</th>
-        <th>share count</th>
-        <th>Link</th>
-        <th>Download</th>
+      <th v-for="h in header">{{ h }}</th>
       </tr>
     </thead>
     <tbody>
       <tr v-for="(row, i) in result" :key="i">
         <td>{{ i }}</td>
-        <td>{{ row.id }}</td>
-        <td>{{ getTime(row.created_time) }}</td>
-        <td>{{ row.likes.summary.total_count }}</td>
-        <td>{{ row.comments.summary.total_count }}</td>
-        <td>{{ row.shares.count }}</td>
+        <td>{{ row.time }}</td>
+        <td>{{ row.count.shares }}</td>
+        <td>{{ row.count.likes }}</td>
+        <td>{{ row.count.comments }}</td>
         <td>
           <a class="ui button" target="_blank"
-            :href="`https://www.facebook.com/${row.id}`">連結</a>
-        </td>
-        <td>
+            :href="facebookLink(row.id)">連結</a>
           <button class="ui primary button parser-download"
             :data-id="row.id" @click="downloadListener">下載</button>
         </td>
@@ -60,38 +58,40 @@
 </template>
 
 <script>
+import Token from './Token'
+
+import _ from 'lodash'
 import $ from 'jquery'
 import moment from 'moment'
 
-const fields = [
-  { id: 'token', type: 'text', name: 'Token', after: '<a target="_blank" href="https://developers.facebook.com/tools/explorer/">到此領取 token</a>' },
-  { id: 'url',   type: 'text', name: '粉絲專頁連結' },
-  { id: 'since', type: 'date', name: '開始時間' },
-  { id: 'until', type: 'date', name: '結束時間' }
-]
+const header = ['#', '貼文時間', '分享數', '按讚數', '留言數', '操作']
 
 export default {
   name: 'parser',
   props: [ 'appdata' ],
+  components: { Token },
   data() {
     return {
-      fields: fields,
+      header: header,
       fetch:  false,
-      result: []
+      result: [],
+      req: {
+        url:   '',
+        since: '',
+        until: ''
+      }
     }
   },
   methods: {
-    getTime(str) {
-      return moment(str).format('YYYY/MM/DD HH:mm:ss ZZ')
+    clearRequest() {
+      const app = this
+      app.req.url   = ''
+      app.req.since = ''
+      app.req.until = ''
     },
     getAllPosts(e) {
-      let app = this
-      // retrieve form data
-      var keys = fields.map(item => item.id)
-      var data = {}
-      keys.forEach(key => {
-        data[key] = $('#' + key).val()
-      })
+      const app  = this
+      const data = _.assign({ token: app.appdata.store.token }, app.req)
       // send POST /allposts request
       $.ajax({
         type:        'POST',
@@ -101,9 +101,25 @@ export default {
         dataType:    'json'
       })
       .done(res => {
-        app.fetch  = true
-        app.result = res
+        app.result = _(res)
+          .map(row => {
+            return {
+              id:    row.id,
+              time:  moment(row.created_time).format('YYYY/MM/DD HH:mm:ss ZZ'),
+              count: {
+                likes:    row.likes.summary.total_count,
+                comments: row.comments.summary.total_count,
+                shares:   row.shares ? row.shares.count : 0
+              }
+            }
+          })
+          .value()
       })
+      // reset req
+      app.clearRequest()
+    },
+    facebookLink(id) {
+      return `https://www.facebook.com/${id}`
     },
     downloadListener(e) {
       var nodeId   = $(e.target).attr('data-id')
