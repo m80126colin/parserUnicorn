@@ -17,7 +17,7 @@ def __loadStopwords__(filename):
 
 stopwords = __loadStopwords__('stopwords.txt')
 
-def intersect(dataset):
+def intersect(dataset, limit):
 	print('[Intersect] Start processing intersect ...')
 	# unique id list
 	id_list    = [ [key, len(list(group))]
@@ -36,20 +36,23 @@ def intersect(dataset):
 	size          = len(id_dataset)
 	article_count = [ len(data) for data in dataset ]
 	article       = [ [
-		list(set(id_dataset[i]) & set(id_dataset[j]))
+		len(list(set(id_dataset[i]) & set(id_dataset[j])))
 		for j in range(size) ]
 		for i in range(size) ]
-	# first 100
+	#
 	print('[Intersect] Start calculating intersect between people ...')
 	## valid id list
 	valid_id_list = [ x
 		for x in sorted(id_list, key = lambda x : -x[1])
 		if x[1] > 1
 	]
-	peo_list = [ id_dict[ x[0] ] for x in valid_id_list[:100] ]
+	peo_list = [ id_dict[ x[0] ] for x in valid_id_list[:limit] ]
 	size     = len(peo_list)
 	people   = [ [
-		sum(1 if peo_list[i] in data and peo_list[j] in data else 0 for data in id_dataset)
+			[ k for k in range(len(id_dataset))
+				if peo_list[i] in id_dataset[k]
+					and peo_list[j] in id_dataset[k]
+			] if i is not j else []
 		for j in range(size) ]
 		for i in range(size) ]
 	print('[Intersect] Done!')
