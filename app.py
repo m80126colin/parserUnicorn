@@ -128,9 +128,11 @@ def lineData(data):
 @api.route('/intersect', method = 'POST')
 def api_POST_intersect():
 	files   = bottle.request.files
+	limit   = int(bottle.request.params.limit)
+	# dataset
 	dataset = [ lineData(files.get(file)) for file in files ]
 	# calculate intersection
-	result  = uni.analysis.intersect(dataset)
+	result  = uni.analysis.intersect(dataset, limit)
 	# make csv
 	people  = [ result.get('list')[idx][0] for idx in result.get('peo_list') ]
 	## make data
@@ -138,17 +140,27 @@ def api_POST_intersect():
 	data.append(['#'] + people)
 	size    = len(people)
 	for i in range(size):
-		data.append([ people[i] ] + result.get('people')[i])
+		tmp = [ people[i] ]
+		for j in range(size):
+			tmp.append( len(result.get('people')[i][j]) )
+		data.append(tmp)
 	# write csv
 	file    = uni.utiltools.writeCsv(data, _api.dl_path(_api.intersect))
+	# make data
+	data    = []
+	size    = len(people)
+	for i in range(size):
+		for j in range(size):
+			tmp = result.get('people')[i][j]
+			data.append([ people[i], people[j], len(tmp) ] + tmp)
+	# write csv
+	file2   = uni.utiltools.writeCsv(data, _api.dl_path(_api.intersect))
 	# return
 	return json.dumps(dict(
-		link          = _api.dl_url(_api.intersect, file),
-		list          = result.get('list'),
-		peo_list      = result.get('peo_list'),
-		article       = result.get('article'),
-		article_count = result.get('article_count'),
-		people        = result.get('people')
+		link    = _api.dl_url(_api.intersect, file),
+		link2   = _api.dl_url(_api.intersect, file2),
+		article = result.get('article'),
+		count   = result.get('article_count')
 	))
 
 ######################################################################
