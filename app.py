@@ -142,7 +142,8 @@ def api_POST_intersect():
 	for i in range(size):
 		tmp = [ people[i] ]
 		for j in range(size):
-			tmp.append( len(result.get('people')[i][j]) )
+			if j < i:
+				tmp.append( len(result.get('people')[i][j]) )
 		data.append(tmp)
 	# write csv
 	file    = uni.utiltools.writeCsv(data, _api.dl_path(_api.intersect))
