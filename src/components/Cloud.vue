@@ -2,28 +2,15 @@
 <section id="cloud" class="cloud">
   <form id="form" class="ui form" method="post" enctype="multipart/form-data" @submit.prevent="cloudHandler">
     <div class="inline field">
-      <input id="data" type="file" name="data" />
+      <input type="file" name="data" />
       <button type="submit" class="ui primary button">上傳</button>
     </div>
   </form>
-  <div id="count" v-show="link" class="ui basic segment">
+  <div v-if="link" class="ui basic segment">
     <a class="ui button" target="_blank" :href="link">下載</a>
   </div>
-  <div v-if="false">
-    <textarea id="dd" cols="30" rows="10" v-model="will"></textarea>
-    <div v-if="will" id="rr">
-      <table v-if="wont.length" class="pure-table pure-table-bordered">
-      <tbody>
-        <tr v-for="row in wont">
-          <td v-for="ele in row">{{ ele }}</td>
-        </tr>
-      </tbody>
-      </table>
-    </div>
-    <button @click.prevent="visualizeData" class="pure-button pure-button-primary">GO</button>
-  </div>
   <div class="ui basic segment canvas-container">
-    <canvas id="cloud" :width="width" :height="height"></canvas>
+    <canvas :width="width" :height="height"></canvas>
   </div>
 </section>
 </template>
@@ -33,6 +20,7 @@ import _ from 'lodash'
 import $ from 'jquery'
 import stat from 'simple-statistics'
 import WordCloud from 'WordCloud'
+import uni from '../scripts'
 
 window.stat = stat
 
@@ -97,21 +85,16 @@ export default {
   },
   methods: {
     cloudHandler(e) {
-      let app = this
-      let formData = new FormData( $('#form')[0] )
+      const app      = this
+      const formData = new FormData( $('#form')[0] )
 
-      $.ajax({
-        type:        'POST',
-        url:         '/api/cloud',
-        data:        formData,
-        processData: false,
-        contentType: false
-      })
-      .done(data => {
-        const res = JSON.parse(data.list)
-        app.link      = data.link
-        app.cloudData = res
-      })
+      uni.$postForm('/api/cloud', formData)
+        .done(data => {
+          window.console.log(data)
+          const res = JSON.parse(data.list)
+          app.link      = data.link
+          app.cloudData = res
+        })
     },
     visualizeData(e) {
       let app = this
