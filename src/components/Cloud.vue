@@ -9,9 +9,11 @@
   <div v-if="link" class="ui basic segment">
     <a class="ui button" target="_blank" :href="link">下載</a>
   </div>
+  <!--
   <div class="ui basic segment canvas-container">
     <canvas :width="width" :height="height"></canvas>
   </div>
+  -->
 </section>
 </template>
 
@@ -45,6 +47,7 @@ export default {
   },
   watch: {
     cloudData(newData) {
+      /*
       if (!Array.isArray(newData) || newData.length === 0)
         return
 
@@ -81,6 +84,7 @@ export default {
         gridSize: Math.round(6 * factor),
         weightFactor: size => 12 * factor * (7 * zScore(size) / range + 0.75)
       })
+      */
     }
   },
   methods: {
