@@ -140,6 +140,10 @@ def api_POST_intersect():
 	dataset = [ lineData(files.get(file)) for file in files ]
 	# calculate intersection
 	result  = uni.analysis.intersect(dataset, limit)
+	#########
+	data    = sorted(result.get('list'), key = lambda x : -x[1])
+	file3   = uni.utiltools.writeCsv(data, _api.dl_path(_api.intersect))
+	#########
 	# make csv
 	people  = [ result.get('list')[idx][0] for idx in result.get('peo_list') ]
 	## make data
@@ -151,6 +155,7 @@ def api_POST_intersect():
 			+ [ len(result.get('people')[i][j]) for j in range(size) ])
 	# write csv
 	file    = uni.utiltools.writeCsv(data, _api.dl_path(_api.intersect))
+	#########
 	# make data
 	size    = len(people)
 	data    = [
@@ -165,6 +170,7 @@ def api_POST_intersect():
 	return json.dumps(dict(
 		link    = _api.dl_url(_api.intersect, file),
 		link2   = _api.dl_url(_api.intersect, file2),
+		link3   = _api.dl_url(_api.intersect, file3),
 		article = result.get('article'),
 		count   = result.get('article_count')
 	))
