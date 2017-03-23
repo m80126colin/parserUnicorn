@@ -74,21 +74,25 @@ def wordCountData(data):
 	# word count
 	return uni.analysis.wordCount(raw)
 
-# cloud route
-
+'''
+    @route {POST} /cloud
+'''
 @api.route('/cloud', method = 'POST')
 def cloud_POST():
 	data   = bottle.request.files.get('data')
 	res    = wordCountData(data)
 	# write into csv
 	file   = uni.utiltools.writeCsv(res, _wc_paths)
+	print(_api.url(_wc_folder, file))
 	# return
 	return dict(
 		list = json.dumps(res),
 		link = _api.url(_wc_folder, file)
 	)
 
-
+'''
+    @route {POST} /associ
+'''
 @api.route('/associ', method = 'POST')
 def associ_POST():
 	files   = bottle.request.files
@@ -125,6 +129,9 @@ def lineData(data):
 	raw = [ line.decode().strip() for line in data.file.readlines() ]
 	return raw
 
+'''
+    @route {POST} /intersect
+'''
 @api.route('/intersect', method = 'POST')
 def api_POST_intersect():
 	files   = bottle.request.files
@@ -133,6 +140,10 @@ def api_POST_intersect():
 	dataset = [ lineData(files.get(file)) for file in files ]
 	# calculate intersection
 	result  = uni.analysis.intersect(dataset, limit)
+	#########
+	data    = sorted(result.get('list'), key = lambda x : -x[1])
+	file3   = uni.utiltools.writeCsv(data, _api.dl_path(_api.intersect))
+	#########
 	# make csv
 	people  = [ result.get('list')[idx][0] for idx in result.get('peo_list') ]
 	## make data
@@ -140,26 +151,26 @@ def api_POST_intersect():
 	data.append(['#'] + people)
 	size    = len(people)
 	for i in range(size):
-		tmp = [ people[i] ]
-		for j in range(size):
-			if j < i:
-				tmp.append( len(result.get('people')[i][j]) )
-		data.append(tmp)
+		data.append([ people[i] ]
+			+ [ len(result.get('people')[i][j]) for j in range(size) ])
 	# write csv
 	file    = uni.utiltools.writeCsv(data, _api.dl_path(_api.intersect))
+	#########
 	# make data
-	data    = []
 	size    = len(people)
-	for i in range(size):
-		for j in range(size):
-			tmp = result.get('people')[i][j]
-			data.append([ people[i], people[j], len(tmp) ] + tmp)
+	data    = [
+		[ people[i], people[j], len(result.get('people')[i][j]) ]
+			+ result.get('people')[i][j]
+		for i in range(size)
+		for j in range(size)
+		if i < j ]
 	# write csv
 	file2   = uni.utiltools.writeCsv(data, _api.dl_path(_api.intersect))
 	# return
 	return json.dumps(dict(
 		link    = _api.dl_url(_api.intersect, file),
 		link2   = _api.dl_url(_api.intersect, file2),
+		link3   = _api.dl_url(_api.intersect, file3),
 		article = result.get('article'),
 		count   = result.get('article_count')
 	))
