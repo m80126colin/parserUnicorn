@@ -58,6 +58,10 @@
         target="_blank" 
         v-if="result.link2"
         :href="result.link2">下載資料</a>
+      <a class="ui primary button"
+        target="_blank" 
+        v-if="result.link3"
+        :href="result.link3">下載所有 ID</a>
     </div>
   </article>
 </section>
