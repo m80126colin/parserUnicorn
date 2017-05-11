@@ -112,8 +112,9 @@ def associ_POST():
 		link2 = _api.url(_as_folder, file2)
 	)
 
-# parser routes
-
+'''
+    @route {POST} /allposts
+'''
 @api.route('/allposts', method = 'POST')
 def allposts_POST():
 	data = bottle.request.json
@@ -137,7 +138,8 @@ def api_POST_intersect():
 	files   = bottle.request.files
 	limit   = int(bottle.request.params.limit)
 	# dataset
-	dataset = [ lineData(files.get(file)) for file in files ]
+	size    = len(files)
+	dataset = [ lineData(files.get('row%d' % i)) for i in range(size) ]
 	# calculate intersection
 	result  = uni.analysis.intersect(dataset, limit)
 	#########
