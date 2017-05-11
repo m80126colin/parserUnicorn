@@ -4,23 +4,32 @@ import itertools
 
 _dict_path = path.join(path.dirname(path.realpath(__file__)), 'dictionary')
 
-# setting jieba
+'''
+  setting jieba
+'''
+# initialisation
 jieba.set_dictionary( path.join(_dict_path, 'dict.txt.big') )
 jieba.load_userdict( path.join(_dict_path, 'mydict.txt') )
 
-# load stop words
 def __loadStopwords__(filename):
 	file  = path.join(_dict_path, filename)
 	sw    = [ line.rstrip() for line in open(file, 'r', encoding = 'utf-8') ]
 	sw[0] = sw[0][1:]
 	return {}.fromkeys(sw)
 
+# load stop words
 stopwords = __loadStopwords__('stopwords.txt')
 
+'''
+  intersect process
+
+	@param { [[id]] }  dataset
+	@param { integer } limit
+'''
 def intersect(dataset, limit):
 	print('[Intersect] Start processing intersect ...')
-	# unique id list
-	id_list    = [ [key, len(list(group))]
+	# list of unique id with number of appearance
+	id_list    = [ [ key, len(list(group)) ]
 		for key, group in itertools.groupby(
 			sorted([ x for data in dataset for x in data ]))
 	]
